@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>고객확인 재이행 — ParaPara KYC 프로토타입</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap');
+
+/* ── ParaPara design tokens (from _ds/parapara-design-system) ── */
+:root{
+  --white:rgb(255,255,255);
+  --zinc-50:rgb(250,250,250); --zinc-100:rgb(244,244,245); --zinc-200:rgb(228,228,231);
+  --zinc-400:rgb(161,161,170); --zinc-500:rgb(113,113,122); --zinc-600:rgb(82,82,91);
+  --zinc-800:rgb(39,39,42); --zinc-900:rgb(24,24,27); --zinc-950:rgb(9,9,11);
+  --indigo-50:rgb(238,242,255); --indigo-300:rgb(165,180,252); --indigo-500:rgb(99,102,241);
+  --indigo-600:rgb(79,70,229); --indigo-700:rgb(67,56,202); --indigo-800:rgb(55,48,163);
+  --green-500:rgb(34,197,94); --green-600:rgb(22,163,74);
+  --amber-500:rgb(245,158,11); --amber-600:rgb(217,119,6);
+  --blue-500:rgb(59,130,246); --blue-600:rgb(37,99,235);
+  --red-400:rgb(248,113,113); --red-600:rgb(220,38,38);
+
+  --badge-success-bg:rgba(22,163,74,0.1); --badge-warning-bg:rgba(217,119,6,0.1);
+  --badge-error-bg:rgba(220,38,38,0.1); --badge-info-bg:rgba(37,99,235,0.1);
+
+  --bg-default:var(--white); --bg-surface:var(--zinc-50); --bg-muted:var(--zinc-100);
+  --bg-input:var(--zinc-200); --bg-inverse:var(--zinc-900);
+  --border-default:var(--zinc-200); --border-ring:var(--zinc-400); --border-ring-subtle:rgba(9,9,11,0.05);
+  --text-primary:var(--zinc-950); --text-secondary:var(--zinc-500); --text-on-muted:var(--zinc-900);
+  --text-inverse:var(--white); --text-disabled:var(--zinc-400);
+
+  --primary-default:var(--indigo-700); --primary-foreground:var(--indigo-50);
+  --semantic-success:var(--green-600); --semantic-warning:var(--amber-600);
+  --semantic-error:var(--red-600); --semantic-info:var(--blue-600);
+
+  --radius-sm:6; --radius-md:10; --radius-lg:14; --radius-xl:16; --radius-2xl:24;
+  --r-sm:6px; --r-md:10px; --r-lg:14px; --r-xl:16px; --r-2xl:24px; --r-pill:999px;
+  --h-button-sm:36px; --h-button-lg:48px; --h-button-xl:56px; --h-input:50px;
+
+  --font-sans:"Inter","Noto Sans KR",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --font-numeric:"Inter","Noto Sans KR",system-ui,sans-serif;
+  --weight-regular:400; --weight-medium:500; --weight-semibold:600; --weight-bold:700;
+
+  --dur-fast:120ms; --dur-base:200ms; --dur-slow:320ms;
+  --ease-standard:cubic-bezier(0.2,0,0,1);
+  --ring-card:inset 0 0 0 1px var(--border-ring-subtle);
+  --ring-hairline:inset 0 0 0 1px var(--border-default);
+  --shadow-overlay:0 8px 24px rgba(9,9,11,0.12),0 2px 8px rgba(9,9,11,0.08);
+}
+
+*{box-sizing:border-box;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:#e8e8ec;font-family:var(--font-sans);color:var(--text-primary)}
+
+/* DS component interaction states */
+.pp-btn:not(:disabled){transition:filter var(--dur-fast) var(--ease-standard),background var(--dur-fast) var(--ease-standard)}
+.pp-btn-primary:not(:disabled):hover{filter:brightness(.93)} .pp-btn-primary:not(:disabled):active{filter:brightness(.86)}
+.pp-btn-secondary:not(:disabled):hover{filter:brightness(.96)} .pp-btn-secondary:not(:disabled):active{filter:brightness(.92)}
+.pp-btn-ghost:not(:disabled):hover{background:var(--bg-muted)} .pp-btn-ghost:not(:disabled):active{background:var(--bg-input)}
+.pp-input:not(.pp-input-err):focus-within{box-shadow:inset 0 0 0 1.5px var(--primary-default)}
+.pp-input-err{box-shadow:inset 0 0 0 1.5px var(--semantic-error)!important}
+.pp-tap{cursor:pointer} .pp-tap:active{filter:brightness(.97)}
+input::placeholder{color:var(--text-secondary)}
+::-webkit-scrollbar{width:0;height:0}
+
+/* prototype-scoped keyframes (from the .dc.html source) */
+@keyframes pp-screen-in{from{transform:translateY(10px)}to{transform:none}}
+@keyframes pp-float{0%,100%{transform:translateY(0) rotateX(14deg) rotateZ(-7deg)}50%{transform:translateY(-12px) rotateX(14deg) rotateZ(-7deg)}}
+@keyframes pp-glow{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:.9;transform:scale(1.08)}}
+@keyframes pp-spin{to{transform:rotate(360deg)}}
+@keyframes pp-spin2{to{transform:rotate(360deg)}}
+@keyframes pp-sheet-up{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes pp-fade{from{opacity:0}to{opacity:1}}
+@keyframes pp-toast-in{from{opacity:0;transform:translate(-50%,14px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes pp-pop{0%{transform:scale(.5)}60%{transform:scale(1.08)}100%{transform:scale(1)}}
+@keyframes pp-ring{0%{transform:scale(.5);opacity:.6}100%{transform:scale(2.1);opacity:0}}
+@keyframes pp-scan{0%{top:6%}50%{top:90%}100%{top:6%}}
+@keyframes pp-push-in{from{opacity:0;transform:translateY(-130%)}to{opacity:1;transform:none}}
+
+/* page chrome */
+.page{min-height:100vh;display:flex;flex-direction:column;align-items:center;gap:22px;padding:40px 24px 72px}
+.kicker{font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--primary-default)}
+.device{width:390px;height:844px;border-radius:48px;position:relative;background:var(--bg-default);
+  box-shadow:0 40px 80px rgba(0,0,0,.18),0 0 0 1px rgba(0,0,0,.12);overflow:hidden;flex:none}
+.island{position:absolute;top:11px;left:50%;transform:translateX(-50%);width:126px;height:37px;border-radius:24px;background:#000;z-index:50}
+.statusbar{position:absolute;top:0;left:0;right:0;height:54px;z-index:40;display:flex;align-items:center;justify-content:space-between;padding:18px 30px 0;pointer-events:none}
+.statusbar .t{font-size:15px;font-weight:600;letter-spacing:.02em;color:var(--text-primary)}
+.home-ind{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:140px;height:5px;border-radius:999px;background:rgba(0,0,0,.85);z-index:50}
+.accent-row{display:flex;align-items:center;gap:8px}
+.swatch{width:24px;height:24px;border-radius:999px;border:2px solid var(--bg-default);box-shadow:0 0 0 1px var(--border-default);cursor:pointer}
+.swatch.on{box-shadow:0 0 0 2px var(--text-primary)}
+</style>
+</head>
+<body>
+<div class="page">
+  <div style="display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center">
+    <div class="kicker">ParaPara · KYC</div>
+    <div style="font-size:22px;font-weight:700">고객확인 재이행 — 인터랙티브 프로토타입</div>
+    <div style="font-size:13px;color:var(--text-secondary)">화면을 직접 탭하며 전체 플로우를 진행해 보세요.</div>
+    <div class="accent-row" style="margin-top:6px">
+      <span style="font-size:12px;color:var(--text-secondary)">accent</span>
+      <span class="swatch" data-accent="#4338ca" style="background:#4338ca"></span>
+      <span class="swatch" data-accent="#0f766e" style="background:#0f766e"></span>
+      <span class="swatch" data-accent="#b91c1c" style="background:#b91c1c"></span>
+      <span class="swatch" data-accent="#7c3aed" style="background:#7c3aed"></span>
+      <span class="swatch" data-accent="#1d4ed8" style="background:#1d4ed8"></span>
+    </div>
+  </div>
+
+  <div class="device">
+    <div class="island"></div>
+    <div class="statusbar">
+      <span class="t">9:41</span>
+      <span style="display:flex;align-items:center;gap:7px">
+        <svg width="19" height="12" viewBox="0 0 19 12"><rect x="0" y="7.5" width="3.2" height="4.5" rx=".7" fill="currentColor"/><rect x="4.8" y="5" width="3.2" height="7" rx=".7" fill="currentColor"/><rect x="9.6" y="2.5" width="3.2" height="9.5" rx=".7" fill="currentColor"/><rect x="14.4" y="0" width="3.2" height="12" rx=".7" fill="currentColor"/></svg>
+        <svg width="17" height="12" viewBox="0 0 17 12"><path d="M8.5 3.2C10.8 3.2 12.9 4.1 14.4 5.6L15.5 4.5C13.7 2.7 11.2 1.5 8.5 1.5C5.8 1.5 3.3 2.7 1.5 4.5L2.6 5.6C4.1 4.1 6.2 3.2 8.5 3.2Z" fill="currentColor"/><path d="M8.5 6.8C9.9 6.8 11.1 7.3 12 8.2L13.1 7.1C11.8 5.9 10.2 5.1 8.5 5.1C6.8 5.1 5.2 5.9 3.9 7.1L5 8.2C5.9 7.3 7.1 6.8 8.5 6.8Z" fill="currentColor"/><circle cx="8.5" cy="10.5" r="1.5" fill="currentColor"/></svg>
+        <svg width="27" height="13" viewBox="0 0 27 13"><rect x="0.5" y="0.5" width="23" height="12" rx="3.5" stroke="currentColor" stroke-opacity=".35" fill="none"/><rect x="2" y="2" width="20" height="9" rx="2" fill="currentColor"/><path d="M25 4.5V8.5C25.8 8.2 26.5 7.2 26.5 6.5C26.5 5.8 25.8 4.8 25 4.5Z" fill="currentColor" fill-opacity=".4"/></svg>
+      </span>
+    </div>
+    <div id="screen" style="position:relative;height:100%;width:100%;display:flex;flex-direction:column;background:var(--bg-default);overflow:hidden;font-family:var(--font-sans);transform:translateZ(0)"></div>
+    <div class="home-ind"></div>
+  </div>
+
+  <!-- S1 intro · alternative layouts (static) -->
+  <div style="width:100%;max-width:1200px;display:flex;flex-direction:column;gap:26px;margin-top:54px">
+    <div style="text-align:center;display:flex;flex-direction:column;gap:6px">
+      <div class="kicker">S1 인트로 · 대안 탐색</div>
+      <div style="font-size:21px;font-weight:700">인트로 화면 대안 레이아웃 3가지</div>
+      <div style="font-size:13px;color:var(--text-secondary)">같은 콘텐츠, 다른 정보 구조 — 위 프로토타입은 ‘신뢰 강조형(C)’ 방향이에요.</div>
+    </div>
+    <div id="alts" style="display:flex;gap:30px;justify-content:center;flex-wrap:wrap;align-items:flex-start"></div>
+  </div>
+</div>
+
+<script>
+/* ── pp-icons.js (Phosphor-Fill style custom element), verbatim from the bundle ── */
+(function () {
+  const I = {
+    'caret-left': (m) => `<path d="M160 56 L96 128 L160 200" fill="none" stroke="currentColor" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>`,
+    'caret-right': (m) => `<path d="M96 56 L160 128 L96 200" fill="none" stroke="currentColor" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>`,
+    'caret-down': (m) => `<path d="M64 100 L128 164 L192 100" fill="none" stroke="currentColor" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>`,
+    'arrow-right': (m) => `<path d="M40 128 H210 M150 70 L214 128 L150 186" fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>`,
+    'check': (m) => `<path d="M64 134 L108 178 L192 80" fill="none" stroke="currentColor" stroke-width="24" stroke-linecap="round" stroke-linejoin="round"/>`,
+    'x': (m) => `<path d="M72 72 L184 184 M184 72 L72 184" fill="none" stroke="currentColor" stroke-width="22" stroke-linecap="round"/>`,
+    'shield-check': (m) => `<path d="M208 40H48a16 16 0 0 0-16 16v58.8c0 89.6 75.8 119.3 91 124.4a15.5 15.5 0 0 0 10 0c15.2-5.1 91-34.8 91-124.4V56a16 16 0 0 0-16-16Z" fill="currentColor"/><path d="M94 128 l24 24 l46 -56" fill="none" stroke="${m}" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>`,
+    'check-circle': (m) => `<circle cx="128" cy="128" r="100" fill="currentColor"/><path d="M82 130 l30 30 l62 -70" fill="none" stroke="${m}" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>`,
+    'seal-check': (m) => `<path d="M128 16 l22 22 31 -6 12 29 29 12 -6 31 22 22 -22 22 6 31 -29 12 -12 29 -31 -6 -22 22 -22 -22 -31 6 -12 -29 -29 -12 6 -31 -22 -22 22 -22 -6 -31 31 6 12 -29 29 -12Z" fill="currentColor"/><path d="M90 130 l26 26 l54 -62" fill="none" stroke="${m}" stroke-width="17" stroke-linecap="round" stroke-linejoin="round"/>`,
+    'device-mobile': (m) => `<rect x="62" y="22" width="132" height="212" rx="28" fill="currentColor"/><rect x="92" y="44" width="72" height="7" rx="3.5" fill="${m}"/><circle cx="128" cy="206" r="9" fill="${m}"/>`,
+    'identification-card': (m) => `<rect x="20" y="48" width="216" height="160" rx="26" fill="currentColor"/><circle cx="86" cy="110" r="24" fill="${m}"/><path d="M50 168 a36 36 0 0 1 72 0Z" fill="${m}"/><rect x="148" y="98" width="60" height="13" rx="6.5" fill="${m}"/><rect x="148" y="130" width="60" height="13" rx="6.5" fill="${m}"/>`,
+    'camera': (m) => `<path d="M28 84h36l12-20a8 8 0 0 1 7-4h50a8 8 0 0 1 7 4l12 20h36a16 16 0 0 1 16 16v96a16 16 0 0 1-16 16H28a16 16 0 0 1-16-16v-96a16 16 0 0 1 16-16Zm100 26a38 38 0 1 0 0 76 38 38 0 0 0 0-76Z" fill="currentColor" fill-rule="evenodd"/>`,
+    'bank': (m) => `<path d="M28 98 L128 42 L228 98 Z" fill="currentColor"/><rect x="26" y="198" width="204" height="22" rx="8" fill="currentColor"/><rect x="50" y="116" width="20" height="76" rx="4" fill="currentColor"/><rect x="98" y="116" width="20" height="76" rx="4" fill="currentColor"/><rect x="138" y="116" width="20" height="76" rx="4" fill="currentColor"/><rect x="186" y="116" width="20" height="76" rx="4" fill="currentColor"/>`,
+    'envelope': (m) => `<rect x="26" y="54" width="204" height="148" rx="22" fill="currentColor"/><path d="M42 78 L128 144 L214 78" fill="none" stroke="${m}" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>`,
+    'globe': (m) => `<circle cx="128" cy="128" r="100" fill="currentColor"/><g fill="none" stroke="${m}" stroke-width="11"><ellipse cx="128" cy="128" rx="44" ry="100"/><line x1="32" y1="98" x2="224" y2="98"/><line x1="32" y1="158" x2="224" y2="158"/><line x1="128" y1="28" x2="128" y2="228"/></g>`,
+    'clock': (m) => `<circle cx="128" cy="128" r="100" fill="currentColor"/><path d="M128 70 V130 L172 152" fill="none" stroke="${m}" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>`,
+    'fingerprint': (m) => `<g fill="none" stroke="currentColor" stroke-width="14" stroke-linecap="round"><path d="M40 130 a88 88 0 0 1 176 0"/><path d="M72 150 a56 56 0 0 1 112 -2 v36"/><path d="M104 132 a24 24 0 0 1 48 0 v54"/><path d="M128 132 v82"/></g>`,
+    'paper-plane': (m) => `<path d="M226 28 L30 112 L114 142 L142 226 Z" fill="currentColor"/><path d="M226 28 L114 142" fill="none" stroke="${m}" stroke-width="12" stroke-linecap="round"/>`,
+    'user-focus': (m) => `<circle cx="128" cy="118" r="34" fill="currentColor"/><path d="M74 196 a54 54 0 0 1 108 0Z" fill="currentColor"/><g fill="none" stroke="currentColor" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"><path d="M40 84 V56 a16 16 0 0 1 16 -16 H84"/><path d="M172 40 H200 a16 16 0 0 1 16 16 V84"/><path d="M216 172 V200 a16 16 0 0 1 -16 16 H172"/><path d="M84 216 H56 a16 16 0 0 1 -16 -16 V172"/></g>`,
+    'sparkle': (m) => `<path d="M128 22 C140 82 174 116 234 128 C174 140 140 174 128 234 C116 174 82 140 22 128 C82 116 116 82 128 22 Z" fill="currentColor"/>`,
+    'lock': (m) => `<rect x="46" y="110" width="164" height="124" rx="26" fill="currentColor"/><path d="M82 110 V82 a46 46 0 0 1 92 0 V110" fill="none" stroke="currentColor" stroke-width="22"/><circle cx="128" cy="160" r="13" fill="${m}"/><rect x="121" y="166" width="14" height="30" rx="7" fill="${m}"/>`,
+    'bell': (m) => `<path d="M128 26a72 72 0 0 0-72 72c0 40-12 56-18 64a8 8 0 0 0 6 13h168a8 8 0 0 0 6-13c-6-8-18-24-18-64a72 72 0 0 0-72-72Z" fill="currentColor"/><path d="M104 208 a26 26 0 0 0 48 0" fill="currentColor"/>`,
+    'warning': (m) => `<path d="M114 38 L16 208 a16 16 0 0 0 14 24 h196 a16 16 0 0 0 14 -24 L142 38 a16 16 0 0 0 -28 0Z" fill="currentColor"/><rect x="118" y="104" width="20" height="56" rx="10" fill="${m}"/><circle cx="128" cy="190" r="12" fill="${m}"/>`,
+    'plus': (m) => `<path d="M128 56 V200 M56 128 H200" fill="none" stroke="currentColor" stroke-width="22" stroke-linecap="round"/>`,
+    'pencil': (m) => `<path d="M156 44 L212 100 L100 212 L40 220 L48 160 Z" fill="currentColor"/><path d="M150 70 L186 106" fill="none" stroke="${m}" stroke-width="12" stroke-linecap="round"/>`,
+    'chat': (m) => `<path d="M32 56a16 16 0 0 1 16-16h160a16 16 0 0 1 16 16v112a16 16 0 0 1-16 16H96l-44 36a8 8 0 0 1-13-6V56Z" fill="currentColor"/><circle cx="96" cy="112" r="11" fill="${m}"/><circle cx="136" cy="112" r="11" fill="${m}"/><circle cx="176" cy="112" r="11" fill="${m}"/>`,
+  };
+  const css = `:host{display:inline-flex;line-height:0;flex:none}svg{display:block}`;
+  class PPIcon extends HTMLElement {
+    static get observedAttributes() { return ['name', 'size', 'mark']; }
+    connectedCallback() { this.render(); }
+    attributeChangedCallback() { if (this.shadowRoot) this.render(); }
+    render() {
+      const name = this.getAttribute('name');
+      const size = this.getAttribute('size') || 24;
+      const mark = this.getAttribute('mark') || '#fff';
+      const draw = I[name];
+      if (!this.shadowRoot) this.attachShadow({ mode: 'open' });
+      const inner = draw ? draw(mark) : '';
+      this.shadowRoot.innerHTML = `<style>${css}</style><svg width="${size}" height="${size}" viewBox="0 0 256 256" aria-hidden="true">${inner}</svg>`;
+    }
+  }
+  if (!customElements.get('pp-icon')) customElements.define('pp-icon', PPIcon);
+})();
+
+/* ── DS component helpers (rebuilt to the ParaPara bundle's exact specs) ── */
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;');}
+const BTN_SIZE={sm:{h:'var(--h-button-sm)',fs:14,pad:'0 14px',r:'var(--r-lg)',gap:6},
+  lg:{h:'var(--h-button-lg)',fs:16,pad:'0 16px',r:'var(--r-xl)',gap:8},
+  xl:{h:'var(--h-button-xl)',fs:16,pad:'0 20px',r:'var(--r-xl)',gap:8}};
+const BTN_VAR={primary:{bg:'var(--primary-default)',fg:'var(--primary-foreground)'},
+  secondary:{bg:'var(--bg-muted)',fg:'var(--text-on-muted)'},
+  ghost:{bg:'transparent',fg:'var(--text-primary)'}};
+function btn(o){
+  const S=BTN_SIZE[o.size||'lg'], V=BTN_VAR[o.variant||'primary'], d=!!o.disabled;
+  return `<button type="button" class="pp-btn pp-btn-${o.variant||'primary'}" ${d?'disabled':''} ${d?'':`onclick="${o.onclick||''}"`}
+    style="display:inline-flex;align-items:center;justify-content:center;gap:${S.gap}px;height:${S.h};padding:${S.pad};${o.full?'width:100%;':''}font-family:var(--font-sans);font-size:${S.fs}px;font-weight:var(--weight-semibold);line-height:1;color:${V.fg};background:${V.bg};border:none;border-radius:${S.r};cursor:${d?'not-allowed':'pointer'};opacity:${d?0.4:1};user-select:none;box-sizing:border-box">${o.html||''}</button>`;
+}
+const BADGE_VAR={primary:{bg:'var(--primary-default)',fg:'var(--primary-foreground)',ring:'none'},
+  secondary:{bg:'var(--bg-muted)',fg:'var(--text-on-muted)',ring:'none'},
+  outline:{bg:'transparent',fg:'var(--text-secondary)',ring:'inset 0 0 0 1px var(--border-default)'},
+  success:{bg:'var(--badge-success-bg)',fg:'var(--semantic-success)',ring:'none'},
+  warning:{bg:'var(--badge-warning-bg)',fg:'var(--semantic-warning)',ring:'none'},
+  error:{bg:'var(--badge-error-bg)',fg:'var(--semantic-error)',ring:'none'},
+  info:{bg:'var(--badge-info-bg)',fg:'var(--semantic-info)',ring:'none'}};
+function badge(variant,html){const V=BADGE_VAR[variant]||BADGE_VAR.secondary;
+  return `<span style="display:inline-flex;align-items:center;justify-content:center;height:24px;padding:0 10px;background:${V.bg};color:${V.fg};box-shadow:${V.ring};border-radius:var(--r-pill);font-family:var(--font-sans);font-size:12px;font-weight:var(--weight-medium);line-height:1;white-space:nowrap;box-sizing:border-box">${html}</span>`;}
+function inputField(o){
+  const ring=o.error?'inset 0 0 0 1.5px var(--semantic-error)':'none';
+  const hc=o.error?'var(--semantic-error)':'var(--text-secondary)';
+  return `<div style="display:flex;flex-direction:column;gap:6px;width:100%">
+    ${o.label?`<label style="font-family:var(--font-sans);font-size:13px;font-weight:var(--weight-medium);color:var(--text-secondary);line-height:1">${o.label}</label>`:''}
+    <div class="pp-input ${o.error?'pp-input-err':''}" style="display:flex;align-items:center;gap:8px;height:var(--h-input);padding:0 16px;background:var(--bg-input);border-radius:var(--r-xl);box-shadow:${ring};transition:box-shadow var(--dur-fast) var(--ease-standard);box-sizing:border-box">
+      <input ${o.id?`id="${o.id}"`:''} ${o.inputmode?`inputmode="${o.inputmode}"`:''} value="${esc(o.value)}" oninput="${o.oninput||''}" placeholder="${esc(o.placeholder||'')}"
+        style="flex:1;min-width:0;height:100%;border:none;outline:none;background:transparent;font-family:var(--font-sans);font-size:16px;font-weight:var(--weight-regular);color:var(--text-primary)">
+    </div>
+    ${o.helper?`<span style="font-family:var(--font-sans);font-size:12px;line-height:1.4;color:${hc}">${o.helper}</span>`:''}
+  </div>`;
+}
+function checkbox(checked){
+  return `<span style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;flex:none;border-radius:var(--r-sm);background:${checked?'var(--primary-default)':'var(--bg-default)'};box-shadow:${checked?'none':'inset 0 0 0 1.5px var(--border-ring)'};color:var(--primary-foreground);box-sizing:border-box">${checked?'<pp-icon name="check" size="13"></pp-icon>':''}</span>`;
+}
+function spinner(px){px=px||42;const st=Math.max(2,Math.round(px/9));
+  return `<span role="status" style="display:inline-block;width:${px}px;height:${px}px;border:${st}px solid var(--border-default);border-top-color:var(--primary-default);border-radius:50%;animation:pp-spin .7s linear infinite;box-sizing:border-box"></span>`;}
+function bottomSheet(o){
+  return `<div onclick="${o.onClose||''}" style="position:absolute;inset:0;z-index:1000;display:flex;flex-direction:column;justify-content:flex-end;background:rgba(9,9,11,.4);animation:pp-fade var(--dur-base) var(--ease-standard)">
+    <div onclick="event.stopPropagation()" style="display:flex;flex-direction:column;align-items:center;gap:12px;padding:8px 16px 24px;background:var(--bg-default);border-radius:var(--r-2xl) var(--r-2xl) 0 0;box-shadow:var(--shadow-overlay);animation:pp-sheet-up var(--dur-base) var(--ease-standard);box-sizing:border-box">
+      <span style="width:36px;height:4px;border-radius:var(--r-pill);background:var(--border-default);flex:none"></span>
+      ${o.title?`<span style="align-self:stretch;font-family:var(--font-sans);font-size:18px;font-weight:var(--weight-semibold);line-height:1.2;color:var(--text-primary);padding-top:4px">${o.title}</span>`:''}
+      <div style="align-self:stretch">${o.html||''}</div>
+    </div>
+  </div>`;
+}
+
+/* shared header (52px) with centered title + optional back caret */
+function header(title,back){
+  return `<div style="height:52px;flex:none;display:flex;align-items:center;padding:0 8px;position:relative">
+    ${back?`<div onclick="App.back()" class="pp-tap" style="width:40px;height:40px;border-radius:999px;display:flex;align-items:center;justify-content:center;color:var(--text-primary)"><pp-icon name="caret-left" size="22"></pp-icon></div>`:''}
+    <div style="position:absolute;left:0;right:0;text-align:center;font-size:16px;font-weight:600;color:var(--text-primary);pointer-events:none">${title}</div>
+  </div>`;
+}
+function footer(html){
+  return `<div style="flex:none;padding:10px 22px 28px;background:linear-gradient(to top,var(--bg-default) 72%,rgba(255,255,255,0))">${html}</div>`;
+}
+const scroll='flex:1;min-height:0;overflow:auto;padding:14px 22px 20px;display:flex;flex-direction:column;';
+const screenWrap='flex:1;min-height:0;display:flex;flex-direction:column;animation:pp-screen-in .34s var(--ease-standard)';
+
+/* ── App: state machine ported from the .dc.html DCLogic Component ── */
+const App = {
+  accent:'#4338ca',
+  state:{
+    screen:'intro', stack:[],
+    sheet:null, toast:null, loading:null, loadingText:'',
+    engName:'GILDONG HONG', account:'1102045123456', bankName:'토스뱅크', job:'회사원', purpose:'투자', addr:'서울특별시 강남구 테헤란로 132',
+    telco:'SKT', authMethod:'pass', idKind:'mobile', carf:'no', bio:false,
+    capturing:false,
+    introAgree:{ trade:false, credit:false, unique:false },
+    authAgree:{ credit:false, certTerms:false, certPriv:false, certUnique:false, telco:false },
+    name:'홍길동', rrnFront:'900101', rrnBack:'1', nameTouched:false,
+    acctCode:'',
+    exitSheet:false, acctHelp:false, acctNotesOpen:false, push:null, editReturn:false, consentSheet:false,
+  },
+  order:['intro','phone','phoneAuth','idType','capture','selfie','personal','required','account','acctCode','carf','review','done'],
+  _t:{},
+
+  setState(patch){ Object.assign(this.state, patch); this.render(); },
+
+  go(id){ this.setState({ screen:id, stack:[...this.state.stack, this.state.screen], sheet:null, push:null });
+    if(id==='acctCode') this.autofillAcct();
+    if(id==='capture') this.autoCapture(); },
+  back(){ const s=this.state; if(s.stack.length) this.setState({ screen:s.stack[s.stack.length-1], stack:s.stack.slice(0,-1) }); },
+  next(){ const i=this.order.indexOf(this.state.screen); if(i>=0 && i<this.order.length-1) this.go(this.order[i+1]); },
+
+  autoCapture(){ clearTimeout(this._t.cap); this._t.cap=setTimeout(()=>this.shutter(), 2200); },
+  autofillAcct(){ clearTimeout(this._t.aT); clearTimeout(this._t.aP1); clearTimeout(this._t.aP2);
+    this.setState({ acctCode:'' });
+    this._t.aP1=setTimeout(()=>this.setState({ push:{ app:(this.state.bankName||'은행'), body:'1원 입금 · 입금자명 “파라파라041”', icon:'bank' } }), 800);
+    this._t.aT=setTimeout(()=>this.setState({ acctCode:'041' }), 1550);
+    this._t.aP2=setTimeout(()=>this.setState({ push:null }), 3600); },
+
+  introAllOn(){ const a=this.state.introAgree; return a.trade&&a.credit&&a.unique; },
+  toggleIntroAll(){ const v=!this.introAllOn(); this.setState({ introAgree:{ trade:v, credit:v, unique:v } }); },
+  toggleIntro(k){ const a=this.state.introAgree; this.setState({ introAgree:{ ...a, [k]:!a[k] } }); },
+  authAllOn(){ const a=this.state.authAgree; return a.credit&&a.certTerms&&a.certPriv&&a.certUnique&&a.telco; },
+  toggleAuthAll(){ const v=!this.authAllOn(); this.setState({ authAgree:{ credit:v, certTerms:v, certPriv:v, certUnique:v, telco:v } }); },
+  toggleAuth(k){ const a=this.state.authAgree; this.setState({ authAgree:{ ...a, [k]:!a[k] } }); },
+
+  setName(e){ this.setState({ name:e.target.value, nameTouched:true }); },
+  setRrnFront(e){ this.setState({ rrnFront:(e.target.value||'').replace(/\D/g,'').slice(0,6) }); },
+  setRrnBack(e){ this.setState({ rrnBack:(e.target.value||'').replace(/\D/g,'').slice(0,1) }); },
+  setEng(e){ this.setState({ engName:(e.target.value||'').toUpperCase() }); },
+  setAccount(e){ this.setState({ account:(e.target.value||'').replace(/\D/g,'').slice(0,16) }); },
+  setAcctCode(e){ this.setState({ acctCode:(e.target.value||'').replace(/\D/g,'').slice(0,3) }); },
+  set(field,val){ this.setState({ [field]:val }); },
+  toggleBio(){ this.setState({ bio:!this.state.bio }); },
+
+  openExit(){ this.setState({ exitSheet:true }); },
+  closeExit(){ this.setState({ exitSheet:false }); },
+  exitNow(){ this.setState({ exitSheet:false }); this.showToast('11월 3일 전에 다시 알려드릴게요');
+    clearTimeout(this._t.ex); this._t.ex=setTimeout(()=>this.setState({ screen:'intro', stack:[] }), 450); },
+  openConsent(){ this.setState({ consentSheet:true }); },
+  closeConsent(){ this.setState({ consentSheet:false }); },
+  agreeAndStart(){ if(!this.introAllOn()) return; this.setState({ consentSheet:false }); this.go('phone'); },
+
+  toggleAcctNotes(){ this.setState({ acctNotesOpen:!this.state.acctNotesOpen }); },
+  openAcctHelp(){ this.setState({ acctHelp:true }); },
+  closeAcctHelp(){ this.setState({ acctHelp:false }); },
+  confirmAcct(){ if(this.state.acctCode.length!==3) return; this.showLoading('계좌를 확인하고 있어요…','carf',1000); },
+
+  showToast(msg){ this.setState({ toast:msg }); clearTimeout(this._t.toast); this._t.toast=setTimeout(()=>this.setState({ toast:null }), 2200); },
+  showLoading(text,then,ms){ this.setState({ loading:true, loadingText:text }); clearTimeout(this._t.load);
+    this._t.load=setTimeout(()=>{ this.setState({ loading:null }); if(then) this.go(then); }, ms||1500); },
+
+  openSheet(kind){ this.setState({ sheet:kind }); },
+  closeSheet(){ this.setState({ sheet:null }); },
+  pickSheet(i){ const sd=this.sheetData(); if(!sd){ this.setState({ sheet:null }); return; }
+    const value=sd.options[i]; const map={ job:'job', purpose:'purpose', bank:'bankName', addr:'addr' };
+    const f=map[this.state.sheet]; if(f) this.setState({ [f]:value, sheet:null }); else this.setState({ sheet:null }); },
+  sheetData(){ const k=this.state.sheet; const sets={
+    job:{ title:'직업 선택', current:this.state.job, options:['회사원','자영업','전문직','공무원','학생','주부','무직','기타'] },
+    purpose:{ title:'거래 목적 선택', current:this.state.purpose, options:['투자','자산 증식','여유 자금 운용','결제·송금','기타'] },
+    bank:{ title:'은행 선택', current:this.state.bankName, options:['KB국민은행','신한은행','우리은행','하나은행','토스뱅크','카카오뱅크','NH농협은행','IBK기업은행'] },
+    addr:{ title:'주소 검색', current:this.state.addr, options:['서울특별시 강남구 테헤란로 132','서울특별시 송파구 올림픽로 300','경기도 성남시 분당구 판교역로 235','부산광역시 해운대구 센텀중앙로 79'] },
+  }; return sets[k]||null; },
+
+  requestAuth(){ this.showLoading('PASS 앱으로 인증을 요청했어요…','idType',1300); },
+  idNext(){ if(this.state.idKind==='mobile') this.showLoading('모바일 신분증을 확인하고 있어요…','selfie',1200); else this.go('capture'); },
+  shutter(){ if(this.state.screen!=='capture'||this.state.capturing) return; this.setState({ capturing:true });
+    clearTimeout(this._t.c); this._t.c=setTimeout(()=>{ this.setState({ capturing:false }); this.go('personal'); }, 1100); },
+  captureSelfie(){ if(!this.state.bio){ this.showToast('생체정보 수집·이용에 동의해 주세요'); return; } this.showLoading('얼굴을 확인하고 있어요…','personal',1300); },
+  send1won(){ const ok=this.state.bankName && this.state.account.replace(/\D/g,'').length>=10; if(!ok) return; this.showLoading('1원을 보내고 있어요…','acctCode',1200); },
+  submit(){ this.showLoading('제출하고 있어요…','done',1600); },
+  goHome(){ this.setState({ screen:'intro', stack:[], editReturn:false, push:null }); },
+  editDone(){ this.setState({ editReturn:false }); this.go('review'); },
+  editRow(target){ this.setState({ editReturn:true }); this.go(target); },
+  remindLater(){ this.showToast('11월 3일 전에 다시 알려드릴게요'); },
+  doNow(){ this.go('phone'); },
+
+  /* selectable-card / dot / chip / check style strings (verbatim) */
+  circleSel(on){ return 'width:24px;height:24px;flex:none;border-radius:999px;display:grid;place-items:center;color:'+(on?'#fff':'transparent')+';background:'+(on?'var(--primary-default)':'transparent')+';box-shadow:'+(on?'none':'inset 0 0 0 2px var(--border-ring)'); },
+  itemCheck(on){ return 'width:22px;height:22px;flex:none;display:grid;place-items:center;color:'+(on?'var(--primary-default)':'var(--zinc-400)'); },
+  cardSel(on){ return 'box-shadow:'+(on?'inset 0 0 0 2px var(--primary-default)':'inset 0 0 0 1px var(--border-default)')+';background:'+(on?'var(--indigo-50)':'var(--bg-default)'); },
+  dotSel(on){ return 'width:22px;height:22px;border-radius:999px;flex:none;box-shadow:'+(on?'inset 0 0 0 6.5px var(--primary-default)':'inset 0 0 0 2px var(--border-ring)'); },
+  chipSel(on){ return 'box-shadow:'+(on?'inset 0 0 0 2px var(--primary-default)':'inset 0 0 0 1px var(--border-default)')+';background:'+(on?'var(--indigo-50)':'var(--bg-default)')+';color:'+(on?'var(--primary-default)':'var(--text-primary)'); },
+
+  applyAccent(c){ this.accent=c; document.documentElement.style.setProperty('--primary-default', c);
+    document.querySelectorAll('.swatch').forEach(el=>el.classList.toggle('on', el.dataset.accent===c)); },
+
+  /* ── render ── */
+  render(){
+    const scr=document.getElementById('screen');
+    const ae=document.activeElement; let fid=null,ss=null,se=null;
+    if(ae&&ae.id&&scr.contains(ae)){ fid=ae.id; try{ ss=ae.selectionStart; se=ae.selectionEnd; }catch(e){} }
+    scr.innerHTML=this.screenHTML();
+    if(fid){ const el=document.getElementById(fid); if(el){ el.focus(); try{ if(ss!=null) el.setSelectionRange(ss,se); }catch(e){} } }
+  },
+
+  screenHTML(){
+    const s=this.state;
+    const prog={ phone:10, phoneAuth:16, idType:22, capture:30, selfie:42, personal:54, required:66, account:78, acctCode:84, carf:95, review:99 };
+    const showProgress=!['intro','done','later'].includes(s.screen);
+    const showClose=!['done','later'].includes(s.screen);
+
+    let body='';
+    switch(s.screen){
+      case 'intro': body=this.sIntro(); break;
+      case 'phone': body=this.sPhone(); break;
+      case 'phoneAuth': body=this.sPhoneAuth(); break;
+      case 'idType': body=this.sIdType(); break;
+      case 'capture': body=this.sCapture(); break;
+      case 'selfie': body=this.sSelfie(); break;
+      case 'personal': body=this.sPersonal(); break;
+      case 'required': body=this.sRequired(); break;
+      case 'account': body=this.sAccount(); break;
+      case 'acctCode': body=this.sAcctCode(); break;
+      case 'carf': body=this.sCarf(); break;
+      case 'review': body=this.sReview(); break;
+      case 'done': body=this.sDone(); break;
+      case 'later': body=this.sLater(); break;
+    }
+
+    let chrome='<div style="height:54px;flex:none"></div>';
+    if(showProgress) chrome+=`<div style="height:3px;flex:none;background:var(--bg-muted)"><div style="height:100%;background:var(--primary-default);border-radius:0 999px 999px 0;width:${prog[s.screen]||0}%;transition:width .45s var(--ease-standard)"></div></div>`;
+    if(showClose) chrome+=`<div onclick="App.openExit()" class="pp-tap" style="position:absolute;right:8px;top:63px;z-index:42;width:40px;height:40px;border-radius:999px;display:flex;align-items:center;justify-content:center;color:var(--text-primary)"><pp-icon name="x" size="20"></pp-icon></div>`;
+    if(s.push) chrome+=this.pushBanner();
+
+    return chrome + body + this.overlays();
+  },
+
+  pushBanner(){ const p=this.state.push;
+    return `<div style="position:absolute;top:60px;left:10px;right:10px;z-index:70;animation:pp-push-in .4s var(--ease-standard)">
+      <div style="display:flex;align-items:center;gap:10px;background:rgba(250,250,252,.86);backdrop-filter:blur(12px);border-radius:18px;padding:11px 13px;box-shadow:0 14px 32px -8px rgba(9,9,11,.35),inset 0 0 0 1px rgba(255,255,255,.55)">
+        <div style="width:34px;height:34px;flex:none;border-radius:9px;background:linear-gradient(150deg,var(--indigo-500),var(--indigo-800));display:grid;place-items:center;color:#fff"><pp-icon name="${p.icon}" size="19" mark="#4338ca"></pp-icon></div>
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><span style="font-size:12px;font-weight:600;color:var(--text-primary)">${p.app}</span><span style="font-size:11px;color:var(--text-secondary)">지금</span></div>
+          <div style="font-size:13px;color:var(--text-primary);line-height:1.35">${p.body}</div>
+        </div>
+      </div>
+    </div>`;
+  },
+
+  /* S1 — intro (신뢰 강조형 / C 방향) */
+  sIntro(){
+    return `<div style="${screenWrap}">
+      ${header('고객확인 재이행',false)}
+      <div style="flex:1;min-height:0;overflow:auto;padding:10px 24px 22px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:16px">
+        <div style="height:158px;flex:none;display:grid;place-items:center;position:relative;perspective:700px">
+          <div style="position:absolute;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,rgba(99,102,241,.4),rgba(99,102,241,0) 68%);filter:blur(6px);animation:pp-glow 4.5s ease-in-out infinite"></div>
+          <div style="width:100px;height:100px;border-radius:26px;background:linear-gradient(150deg,var(--indigo-500),var(--indigo-800));display:grid;place-items:center;color:#fff;box-shadow:0 22px 40px -8px rgba(67,56,202,.55),inset 0 2px 3px rgba(255,255,255,.4);transform-style:preserve-3d;animation:pp-float 4.5s ease-in-out infinite"><pp-icon name="shield-check" size="52" mark="#4338ca"></pp-icon></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div style="font-size:23px;line-height:1.32;font-weight:700;color:var(--text-primary);letter-spacing:-.01em">안전한 거래를 위해<br>1년마다 고객확인을 다시 해요</div>
+          <div style="font-size:13px;line-height:1.6;color:var(--text-secondary)">정기 갱신 시점이에요. 입력한 정보는 본인 확인에만 쓰이고,<br>안전하게 암호화돼 보관돼요.</div>
+        </div>
+        <div style="display:flex;gap:8px;width:100%">
+          ${[['lock','암호화'],['clock','약 3분'],['shield-check','규제 준수']].map(([ic,t])=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;background:var(--bg-surface);border-radius:14px;padding:13px 8px"><span style="color:var(--indigo-600);display:flex"><pp-icon name="${ic}" size="20" mark="var(--bg-surface)"></pp-icon></span><span style="font-size:11px;font-weight:600;color:var(--text-primary)">${t}</span></div>`).join('')}
+        </div>
+        <div style="width:100%;display:flex;flex-direction:column;gap:10px;background:var(--bg-default);border-radius:16px;padding:14px 16px;box-shadow:var(--ring-card);text-align:left">
+          <div style="font-size:13px;font-weight:600;color:var(--text-primary)">미리 준비해 주세요</div>
+          <div style="display:flex;gap:10px">
+            <div style="flex:1;display:flex;align-items:center;gap:9px;background:var(--bg-surface);border-radius:12px;padding:11px 12px"><div style="width:30px;height:30px;flex:none;border-radius:9px;background:var(--indigo-50);display:grid;place-items:center;color:var(--indigo-600)"><pp-icon name="identification-card" size="18" mark="var(--indigo-50)"></pp-icon></div><div style="display:flex;flex-direction:column;min-width:0"><span style="font-size:13px;font-weight:500;color:var(--text-primary)">신분증</span><span style="font-size:11px;color:var(--text-secondary)">주민·면허증</span></div></div>
+            <div style="flex:1;display:flex;align-items:center;gap:9px;background:var(--bg-surface);border-radius:12px;padding:11px 12px"><div style="width:30px;height:30px;flex:none;border-radius:9px;background:var(--indigo-50);display:grid;place-items:center;color:var(--indigo-600)"><pp-icon name="bank" size="18" mark="var(--indigo-50)"></pp-icon></div><div style="display:flex;flex-direction:column;min-width:0"><span style="font-size:13px;font-weight:500;color:var(--text-primary)">본인 명의 계좌</span><span style="font-size:11px;color:var(--text-secondary)">입출금 가능 계좌</span></div></div>
+          </div>
+        </div>
+      </div>
+      ${footer(btn({size:'xl',full:true,onclick:'App.openConsent()',html:'지금 시작하기 <pp-icon name="arrow-right" size="18"></pp-icon>'}))}
+    </div>`;
+  },
+
+  /* S2 — 본인 정보 (이름 + 주민등록번호) */
+  sPhone(){
+    const s=this.state;
+    const nameTrim=s.name.trim();
+    const nameHasBad=/[^가-힣a-zA-Z\s]/.test(nameTrim);
+    const nameValid=nameTrim.length>=2 && !nameHasBad;
+    const nameError=s.nameTouched && !nameValid;
+    const nameHelper=!nameError ? (nameTrim?'':'실명을 입력해 주세요. 예: 홍길동')
+      : (!nameTrim?'이름을 입력해 주세요.':(nameHasBad?'한글 또는 영문 이름만 입력할 수 있어요.':'이름을 2자 이상 입력해 주세요.'));
+    const rrnValid=s.rrnFront.length===6 && s.rrnBack.length===1;
+    const identityDis=!(nameValid && rrnValid);
+    return `<div style="${screenWrap}">
+      ${header('본인인증',false)}
+      <div style="${scroll}gap:16px">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="font-size:21px;font-weight:700;color:var(--text-primary);letter-spacing:-.01em">본인 정보를 입력해 주세요</div>
+          <div style="font-size:13px;color:var(--text-secondary)">주민등록증상의 이름·주민등록번호를 입력해 주세요.</div>
+        </div>
+        ${inputField({label:'이름',placeholder:'성명 입력',value:s.name,oninput:'App.setName(event)',error:nameError,helper:nameHelper,id:'in-name'})}
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="font-size:13px;font-weight:500;color:var(--text-primary)">주민등록번호</div>
+          <div style="display:flex;align-items:center;gap:8px;height:50px;box-sizing:border-box;padding:0 16px;border-radius:16px;background:var(--bg-input)">
+            <input id="in-rrnf" value="${esc(s.rrnFront)}" oninput="App.setRrnFront(event)" inputmode="numeric" maxlength="6" placeholder="생년월일" style="flex:1;min-width:0;border:none;background:transparent;font-family:var(--font-numeric);font-size:16px;color:var(--text-primary);outline:none">
+            <span style="color:var(--text-secondary);font-size:16px">–</span>
+            <input id="in-rrnb" value="${esc(s.rrnBack)}" oninput="App.setRrnBack(event)" inputmode="numeric" maxlength="1" style="width:16px;flex:none;border:none;background:transparent;font-family:var(--font-numeric);font-size:16px;color:var(--text-primary);text-align:center;outline:none">
+            <span style="letter-spacing:3px;color:var(--text-secondary);font-size:14px">●●●●●●</span>
+          </div>
+        </div>
+      </div>
+      ${footer(btn({size:'xl',full:true,disabled:identityDis,onclick:'App.next()',html:'다음'}))}
+    </div>`;
+  },
+
+  /* S3 — 인증 수단 (통신사 + 인증방식 + 약관) */
+  sPhoneAuth(){
+    const s=this.state;
+    const telcoOpts=['SKT','KT','LG U+','알뜰폰'];
+    const telcoBtns=telcoOpts.map(o=>`<button onclick="App.set('telco','${o}')" style="height:48px;border:none;border-radius:14px;font-family:var(--font-sans);font-size:15px;font-weight:600;cursor:pointer;${this.chipSel(o===s.telco)}">${o}</button>`).join('');
+    const authOpts=[
+      { value:'pass', label:'PASS 앱', sub:'앱으로 이동해 간편 인증', badge:'추천' },
+      { value:'sms', label:'문자(SMS)', sub:'인증번호를 문자로 받기', badge:'' },
+    ];
+    const authCards=authOpts.map(o=>`<button onclick="App.set('authMethod','${o.value}')" style="display:flex;align-items:center;gap:12px;padding:14px;border:none;border-radius:16px;text-align:left;cursor:pointer;${this.cardSel(o.value===s.authMethod)}">
+        <span style="${this.dotSel(o.value===s.authMethod)}"></span>
+        <span style="flex:1;display:flex;flex-direction:column;gap:3px">
+          <span style="display:flex;align-items:center;gap:6px"><span style="font-size:15px;font-weight:600;color:var(--text-primary)">${o.label}</span>${o.badge?badge('success',o.badge):''}</span>
+          <span style="font-size:12px;color:var(--text-secondary)">${o.sub}</span>
+        </span>
+      </button>`).join('');
+    const authAllOn=this.authAllOn();
+    const authItems=[
+      { key:'credit', label:'(필수) 파라파라 개인(신용)정보 수집·이용 동의' },
+      { key:'certTerms', label:'(필수) 인증사 서비스 이용약관' },
+      { key:'certPriv', label:'(필수) 인증 시 개인정보 수집 동의' },
+      { key:'certUnique', label:'(필수) 인증 시 고유식별정보 동의' },
+      { key:'telco', label:'(필수) 통신사 이용약관' },
+    ];
+    const authItemsHtml=authItems.map(it=>`<button onclick="App.toggleAuth('${it.key}')" style="display:flex;align-items:center;gap:12px;width:100%;border:none;background:transparent;padding:7px 2px;cursor:pointer;text-align:left">
+        <span style="${this.itemCheck(s.authAgree[it.key])}"><pp-icon name="check" size="14"></pp-icon></span>
+        <span style="flex:1;font-size:13px;color:var(--text-primary)">${it.label}</span>
+        <span style="color:var(--zinc-400);display:flex"><pp-icon name="caret-right" size="16"></pp-icon></span>
+      </button>`).join('');
+    return `<div style="${screenWrap}">
+      ${header('본인인증',true)}
+      <div style="${scroll}gap:16px">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="font-size:21px;font-weight:700;color:var(--text-primary);letter-spacing:-.01em">인증 수단을 선택해 주세요</div>
+          <div style="font-size:13px;color:var(--text-secondary)">통신사와 인증 방식을 고르면 바로 인증을 요청해요.</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="font-size:13px;font-weight:500;color:var(--text-primary)">통신사</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${telcoBtns}</div>
+        </div>
+        <div style="font-size:13px;font-weight:500;color:var(--text-primary);margin-top:2px">인증 방식</div>
+        <div style="display:flex;flex-direction:column;gap:10px">${authCards}</div>
+        <div style="display:flex;flex-direction:column;gap:2px;background:var(--bg-surface);border-radius:18px;padding:14px 16px">
+          <button onclick="App.toggleAuthAll()" style="display:flex;align-items:center;gap:12px;width:100%;border:none;background:transparent;padding:6px 2px;cursor:pointer;text-align:left">
+            <span style="${this.circleSel(authAllOn)}"><pp-icon name="check" size="15"></pp-icon></span>
+            <span style="flex:1;font-size:15px;font-weight:700;color:var(--text-primary)">인증 약관 전체 동의</span>
+            ${authAllOn?'<span style="font-size:12px;font-weight:500;color:var(--text-secondary)">5개 모두 동의</span>':''}
+          </button>
+          ${!authAllOn?`<div style="height:1px;background:var(--border-default);margin:6px 0"></div>${authItemsHtml}`:''}
+        </div>
+        <div style="display:flex;gap:8px;align-items:flex-start">
+          <span style="width:18px;height:18px;flex:none;border-radius:999px;background:var(--bg-muted);display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--text-secondary)">i</span>
+          <span style="font-size:12px;line-height:1.5;color:var(--text-secondary)">PASS 요청 알림이 안 오면 PASS 앱을 직접 열어 진행할 수 있어요.</span>
+        </div>
+      </div>
+      ${footer(btn({size:'xl',full:true,disabled:!authAllOn,onclick:'App.requestAuth()',html:'인증 요청 <pp-icon name="paper-plane" size="17"></pp-icon>'}))}
+    </div>`;
+  },
+
+  /* S4 — 신분증 종류 선택 */
+  sIdType(){
+    const s=this.state;
+    const idOptions=[
+      { value:'mobile', label:'모바일 신분증', badge:'추천 · 더 빨라요', icon:'device-mobile', points:[['추천','모바일 신분증을 이미 발급해 둔 경우'],['필요','정부24·모바일 신분증 앱'],['소요','약 1분 · 촬영 실패 거의 없음']] },
+      { value:'physical', label:'실물 신분증 촬영', badge:'', icon:'identification-card', points:[['추천','실물 신분증만 가지고 있는 경우'],['필요','주민등록증 또는 운전면허증 실물'],['주의','빛 반사·그림자 시 재촬영']] },
+    ];
+    const cards=idOptions.map(o=>`<button onclick="App.set('idKind','${o.value}')" style="display:flex;align-items:flex-start;gap:14px;padding:16px;border:none;border-radius:18px;text-align:left;cursor:pointer;${this.cardSel(o.value===s.idKind)}">
+        <span style="width:44px;height:44px;flex:none;border-radius:13px;background:var(--indigo-50);display:grid;place-items:center;color:var(--indigo-600)"><pp-icon name="${o.icon}" size="24" mark="var(--indigo-50)"></pp-icon></span>
+        <span style="flex:1;display:flex;flex-direction:column;gap:7px">
+          <span style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span style="font-size:15px;font-weight:600;color:var(--text-primary)">${o.label}</span>${o.badge?badge('success',o.badge):''}</span>
+          <span style="display:flex;flex-direction:column;gap:4px">${o.points.map(p=>`<span style="display:flex;align-items:flex-start;gap:7px;font-size:12px;line-height:1.45;color:var(--text-secondary)"><span style="flex:none;font-weight:700;color:var(--indigo-600);min-width:24px">${p[0]}</span><span>${p[1]}</span></span>`).join('')}</span>
+        </span>
+        <span style="${this.dotSel(o.value===s.idKind)};margin-top:3px"></span>
+      </button>`).join('');
+    return `<div style="${screenWrap}">
+      ${header('신분증 인증',false)}
+      <div style="${scroll}gap:16px">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="font-size:21px;font-weight:700;color:var(--text-primary);letter-spacing:-.01em">어떤 신분증으로 인증할까요?</div>
+          <div style="font-size:13px;color:var(--text-secondary)">더 빠른 모바일 신분증을 추천해요.</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px">${cards}</div>
+        <div style="display:flex;gap:8px;align-items:flex-start">
+          <span style="width:18px;height:18px;flex:none;border-radius:999px;background:var(--bg-muted);display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--text-secondary)">i</span>
+          <span style="font-size:12px;line-height:1.5;color:var(--text-secondary)">모바일 신분증이 없으면 실물 촬영으로 진행할 수 있어요.</span>
+        </div>
+      </div>
+      ${footer(btn({size:'xl',full:true,onclick:'App.idNext()',html:'다음 <pp-icon name="arrow-right" size="18"></pp-icon>'}))}
+    </div>`;
+  },
+
+  /* S5 — 신분증 촬영 (자동 인식) */
+  sCapture(){
+    const s=this.state;
+    return `<div style="${screenWrap}">
+      ${header('신분증 인증',false)}
+      <div style="flex:1;min-height:0;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;overflow:hidden;background:#1b1c20">
+        <div style="position:absolute;inset:0;background:radial-gradient(120% 80% at 50% 32%,#2c2e35,#141519)"></div>
+        <div style="position:relative;width:282px;height:178px;border-radius:16px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.55);display:grid;place-items:center;overflow:hidden">
+          <div style="width:230px;height:138px;border-radius:10px;background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14);display:flex;gap:12px;padding:14px;box-sizing:border-box;align-items:flex-start">
+            <div style="width:44px;height:54px;border-radius:8px;background:rgba(255,255,255,.12)"></div>
+            <div style="display:flex;flex-direction:column;gap:8px;padding-top:4px"><div style="width:96px;height:8px;border-radius:4px;background:rgba(255,255,255,.16)"></div><div style="width:120px;height:8px;border-radius:4px;background:rgba(255,255,255,.1)"></div><div style="width:78px;height:8px;border-radius:4px;background:rgba(255,255,255,.1)"></div></div>
+          </div>
+          <div style="position:absolute;left:6px;top:6px;width:26px;height:26px;border-top:3px solid var(--indigo-300);border-left:3px solid var(--indigo-300);border-radius:10px 0 0 0"></div>
+          <div style="position:absolute;right:6px;top:6px;width:26px;height:26px;border-top:3px solid var(--indigo-300);border-right:3px solid var(--indigo-300);border-radius:0 10px 0 0"></div>
+          <div style="position:absolute;left:6px;bottom:6px;width:26px;height:26px;border-bottom:3px solid var(--indigo-300);border-left:3px solid var(--indigo-300);border-radius:0 0 0 10px"></div>
+          <div style="position:absolute;right:6px;bottom:6px;width:26px;height:26px;border-bottom:3px solid var(--indigo-300);border-right:3px solid var(--indigo-300);border-radius:0 0 10px 0"></div>
+          <div style="position:absolute;left:8px;right:8px;height:2px;background:linear-gradient(90deg,transparent,var(--indigo-300),transparent);box-shadow:0 0 14px 1px var(--indigo-500);animation:pp-scan 2.6s ease-in-out infinite"></div>
+        </div>
+        <div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:6px">
+          <div style="display:flex;align-items:center;gap:8px;color:#fff;font-size:14px;font-weight:600"><span style="width:14px;height:14px;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:999px;display:inline-block;animation:pp-spin2 .8s linear infinite"></span>신분증을 자동으로 인식하고 있어요</div>
+          <div style="color:rgba(255,255,255,.6);font-size:12px">빛 반사·그림자를 피해 프레임 안에 맞춰 주세요</div>
+        </div>
+        ${s.capturing?'<div style="position:absolute;inset:0;background:#fff;animation:pp-fade .35s ease;z-index:3"></div>':''}
+      </div>
+    </div>`;
+  },
+
+  /* S6 — 셀피 / 본인 확인 */
+  sSelfie(){
+    const s=this.state;
+    return `<div style="${screenWrap}">
+      ${header('본인 확인',false)}
+      <div style="${scroll}gap:18px">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="font-size:21px;font-weight:700;color:var(--text-primary);letter-spacing:-.01em">얼굴을 확인할게요</div>
+          <div style="font-size:13px;color:var(--text-secondary)">정면을 보고 셀피를 촬영해 주세요.</div>
+        </div>
+        <div style="display:grid;place-items:center;padding:14px 0">
+          <div style="position:relative;width:184px;height:184px;display:grid;place-items:center">
+            <div style="position:absolute;width:184px;height:184px;border-radius:999px;box-shadow:0 0 0 1px var(--border-default);animation:pp-ring 2.6s ease-out infinite"></div>
+            <div style="position:absolute;width:184px;height:184px;border-radius:999px;box-shadow:0 0 0 1px var(--indigo-300);animation:pp-ring 2.6s ease-out infinite 1.3s"></div>
+            <div style="width:160px;height:160px;border-radius:999px;background:var(--bg-muted);display:grid;place-items:center;color:var(--zinc-400);box-shadow:inset 0 0 0 1px var(--border-default)"><pp-icon name="user-focus" size="76"></pp-icon></div>
+          </div>
+        </div>
+        <button onclick="App.toggleBio()" style="display:flex;gap:12px;align-items:flex-start;background:var(--bg-surface);border:none;border-radius:16px;padding:16px;text-align:left;cursor:pointer">
+          <span style="margin-top:1px">${checkbox(s.bio)}</span>
+          <span style="display:flex;flex-direction:column;gap:3px"><span style="font-size:13px;font-weight:600;color:var(--text-primary)">생체정보 수집·이용 동의 (필수)</span><span style="font-size:12px;line-height:1.5;color:var(--text-secondary)">얼굴 정보는 본인 확인에만 쓰이고, 프로필로 사용되지 않아요.</span></span>
+        </button>
+      </div>
+      ${footer(btn({size:'xl',full:true,onclick:'App.captureSelfie()',html:'<pp-icon name="user-focus" size="18"></pp-icon> 동의하고 촬영'}))}
+    </div>`;
+  },
+
+  /* S7 — 개인정보 (여권 정보) */
+  sPersonal(){
+    const s=this.state;
+    const engValid=s.engName.trim().length>=4;
+    const personalDis=!(engValid && !!s.addr);
+    const cta=s.editReturn?'수정 완료':'다음';
+    return `<div style="${screenWrap}">
+      ${header('고객확인 재이행',false)}
+      <div style="${scroll}gap:18px">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="font-size:12px;font-weight:600;color:var(--primary-default);letter-spacing:.04em">2단계 · 개인정보</div>
+          <div style="font-size:21px;font-weight:700;color:var(--text-primary);letter-spacing:-.01em">여권 정보를 입력해 주세요</div>
+        </div>
+        ${inputField({label:'여권 영문 이름',placeholder:'GILDONG HONG',helper:'여권과 정확히 일치해야 해요 (대문자·띄어쓰기)',value:s.engName,oninput:'App.setEng(event)',id:'in-eng'})}
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="font-size:13px;font-weight:500;color:var(--text-primary)">거주지 주소</div>
+          <button onclick="App.openSheet('addr')" style="width:100%;height:50px;box-sizing:border-box;padding:0 16px;border:none;border-radius:16px;background:var(--bg-input);display:flex;align-items:center;justify-content:space-between;cursor:pointer">
+            <span style="font-size:16px;font-weight:500;color:${s.addr?'var(--text-primary)':'var(--text-secondary)'}">${s.addr||'주소 검색'}</span>
+            <span style="color:var(--text-secondary);display:flex"><pp-icon name="caret-down" size="18"></pp-icon></span>
+          </button>
+        </div>
+      </div>
+      ${footer(btn({size:'xl',full:true,disabled:personalDis,onclick:'App.personalNext()',html:cta}))}
+    </div>`;
+  },
+  personalNext(){ const s=this.state; const engValid=s.engName.trim().length>=4; if(!(engValid&&!!s.addr)) return; s.editReturn?this.editDone():this.go('required'); },
+
+  /* S8 — 필수 정보 (직업 + 거래 목적) */
+  sRequired(){
+    const s=this.state;
+    const requiredDis=!(!!s.job && !!s.purpose);
+    const cta=s.editReturn?'수정 완료':'다음';
+    return `<div style="${screenWrap}">
+      ${header('고객확인 재이행',false)}
+      <div style="${scroll}gap:18px">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="font-size:12px;font-weight:600;color:var(--primary-default);letter-spacing:.04em">3단계 · 필수 정보</div>
+          <div style="font-size:21px;font-weight:700;color:var(--text-primary);letter-spacing:-.01em">조금만 더 알려주세요</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="font-size:13px;font-weight:500;color:var(--text-primary)">직업</div>
+          <button onclick="App.openSheet('job')" style="width:100%;height:50px;box-sizing:border-box;padding:0 16px;border:none;border-radius:16px;background:var(--bg-input);display:flex;align-items:center;justify-content:space-between;cursor:pointer"><span style="font-size:16px;font-weight:500;color:${s.job?'var(--text-primary)':'var(--text-secondary)'}">${s.job||'직업을 선택해 주세요'}</span><span style="color:var(--text-secondary);display:flex"><pp-icon name="caret-down" size="18"></pp-icon></span></button>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="font-size:13px;font-weight:500;color:var(--text-primary)">거래 목적</div>
+          <button onclick="App.openSheet('purpose')" style="width:100%;height:50px;box-sizing:border-box;padding:0 16px;border:none;border-radius:16px;background:var(--bg-input);display:flex;align-items:center;justify-content:space-between;cursor:pointer"><span style="font-size:16px;font-weight:500;color:${s.purpose?'var(--text-primary)':'var(--text-secondary)'}">${s.purpose||'거래 목적을 선택해 주세요'}</span><span style="color:var(--text-secondary);display:flex"><pp-icon name="caret-down" size="18"></pp-icon></span></button>
+        </div>
+        <div style="display:flex;gap:10px;background:var(--bg-surface);border-radius:16px;padding:14px">
+          <span style="width:20px;height:20px;flex:none;border-radius:999px;background:var(--bg-default);box-shadow:inset 0 0 0 1px var(--border-default);display:grid;place-items:center;color:var(--text-secondary);font-size:11px;font-weight:700">?</span>
+          <div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:13px;font-weight:600;color:var(--text-primary)">왜 필요한가요?</span><span style="font-size:12px;line-height:1.5;color:var(--text-secondary)">자금세탁방지(AML) 확인용 항목이에요. 거래 제한 용도가 아닙니다.</span></div>
+        </div>
+      </div>
+      ${footer(btn({size:'xl',full:true,disabled:requiredDis,onclick:'App.requiredNext()',html:cta}))}
+    </div>`;
+  },
+  requiredNext(){ const s=this.state; if(!(!!s.job&&!!s.purpose)) return; s.editReturn?this.editDone():this.go('account'); },
+
+  /* S9 — 계좌 인증 */
+  sAccount(){
+    const s=this.state;
+    const accountDis=!(!!s.bankName && s.account.replace(/\D/g,'').length>=10);
+    return `<div style="${screenWrap}">
+      ${header('계좌 인증',false)}
+      <div style="${scroll}gap:18px">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="font-size:21px;font-weight:700;color:var(--text-primary);letter-spacing:-.01em">본인 계좌를 인증해요</div>
+          <div style="font-size:13px;line-height:1.5;color:var(--text-secondary)">등록한 계좌로 1원을 보내드려요. 입금자명 숫자 3자리를 입력하면 끝나요.</div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:8px;background:var(--indigo-50);border-radius:12px;padding:11px 14px;box-shadow:inset 0 0 0 1px rgba(99,102,241,.2)">
+          <span style="color:var(--indigo-600);display:flex;flex:none;margin-top:1px"><pp-icon name="shield-check" size="16" mark="var(--indigo-50)"></pp-icon></span>
+          <span style="font-size:12.5px;line-height:1.45;color:var(--indigo-700)"><strong>본인 명의 실명 계좌</strong>만 인증할 수 있어요. 가족·타인 계좌는 인증되지 않아요.</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="font-size:13px;font-weight:500;color:var(--text-primary)">은행</div>
+          <button onclick="App.openSheet('bank')" style="width:100%;height:50px;box-sizing:border-box;padding:0 16px;border:none;border-radius:16px;background:var(--bg-input);display:flex;align-items:center;justify-content:space-between;cursor:pointer"><span style="font-size:16px;font-weight:500;color:${s.bankName?'var(--text-primary)':'var(--text-secondary)'}">${s.bankName||'은행 선택'}</span><span style="color:var(--text-secondary);display:flex"><pp-icon name="caret-down" size="18"></pp-icon></span></button>
+        </div>
+        ${inputField({label:'계좌번호',placeholder:"'-' 없이 입력",value:s.account,oninput:'App.setAccount(event)',inputmode:'numeric',id:'in-acct'})}
+        <div style="display:flex;flex-direction:column;gap:10px;background:var(--bg-surface);border-radius:16px;padding:16px">
+          <div style="display:flex;align-items:center;gap:10px"><span style="color:var(--text-secondary);display:flex"><pp-icon name="clock" size="18" mark="var(--bg-surface)"></pp-icon></span><span style="font-size:13px;color:var(--text-primary)">계좌 개설이 필요하면 시간이 더 걸려요</span></div>
+          <div style="display:flex;align-items:center;gap:10px"><span style="color:var(--semantic-success);display:flex"><pp-icon name="check-circle" size="18" mark="var(--bg-surface)"></pp-icon></span><span style="font-size:13px;color:var(--text-primary)">그동안 코인 마켓은 이용할 수 있어요</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;padding:0 2px">
+          <button onclick="App.toggleAcctNotes()" style="display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;border:none;background:transparent;padding:6px 0;cursor:pointer">
+            <span style="font-size:13px;font-weight:500;color:var(--text-primary)">계좌 인증 조건 자세히</span>
+            <span style="color:var(--text-secondary);display:flex;transition:transform .2s;transform:${s.acctNotesOpen?'rotate(180deg)':'none'}"><pp-icon name="caret-down" size="16"></pp-icon></span>
+          </button>
+          ${s.acctNotesOpen?`<div style="display:flex;flex-direction:column;gap:7px;padding:4px 0 2px">
+            ${['실명 계좌를 인증하면 원화마켓 거래가 가능해요.','인증번호 전송은 하루 최대 5회까지 가능해요.','은행별 서버 점검 시간에는 계좌 인증이 어려워요.'].map(t=>`<div style="display:flex;gap:8px"><span style="color:var(--zinc-400);font-size:12px">·</span><span style="font-size:12px;line-height:1.5;color:var(--text-secondary)">${t}</span></div>`).join('')}
+          </div>`:''}
+        </div>
+      </div>
+      ${footer(btn({size:'xl',full:true,disabled:accountDis,onclick:'App.send1won()',html:'1원 보내기 <pp-icon name="paper-plane" size="17"></pp-icon>'}))}
+    </div>`;
+  },
+
+  /* S10 — 계좌 1원 인증 코드 */
+  sAcctCode(){
+    const s=this.state;
+    const cells=[0,1,2].map(i=>{
+      const cs='box-shadow:'+((i===s.acctCode.length)?'inset 0 0 0 2px var(--primary-default)':(s.acctCode[i]?'inset 0 0 0 1.5px var(--text-primary)':'inset 0 0 0 1px var(--border-default)'));
+      return `<div style="flex:1;height:62px;border-radius:14px;background:var(--bg-input);display:grid;place-items:center;font-family:var(--font-numeric);font-size:24px;font-weight:600;color:var(--text-primary);${cs}">${s.acctCode[i]||''}</div>`;
+    }).join('');
+    const bankMasked=(s.bankName||'케이뱅크')+' ••••-••-1234';
+    return `<div style="${screenWrap}">
+      ${header('계좌 인증',false)}
+      <div style="${scroll}gap:18px">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="font-size:21px;font-weight:700;color:var(--text-primary);letter-spacing:-.01em">1원을 보냈어요</div>
+          <div style="font-size:13px;line-height:1.5;color:var(--text-secondary)">입금 내역에서 <strong style="color:var(--text-primary)">‘파라파라’ 앞 숫자 3자리</strong>를 입력해 주세요.</div>
+        </div>
+        <div style="position:relative">
+          <div style="display:flex;gap:10px">${cells}</div>
+          <input id="in-acctcode" value="${esc(s.acctCode)}" oninput="App.setAcctCode(event)" inputmode="numeric" maxlength="3" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;border:none;background:transparent;color:transparent;cursor:pointer">
+        </div>
+        <button onclick="App.openAcctHelp()" style="align-self:flex-start;border:none;background:transparent;font-family:var(--font-sans);font-size:13px;font-weight:500;color:var(--text-secondary);text-decoration:underline;cursor:pointer;padding:0">인증번호는 어떻게 확인하나요?</button>
+        <div style="display:flex;align-items:center;gap:10px;background:var(--bg-surface);border-radius:14px;padding:13px 14px">
+          <span style="color:var(--text-secondary);display:flex"><pp-icon name="bank" size="18" mark="var(--bg-surface)"></pp-icon></span>
+          <span style="font-size:14px;font-weight:500;color:var(--text-primary)">${bankMasked}</span>
+        </div>
+      </div>
+      ${footer(btn({size:'xl',full:true,disabled:s.acctCode.length!==3,onclick:'App.confirmAcct()',html:'확인'}))}
+    </div>`;
+  },
+
+  /* S11 — 해외 납세의무 (CARF) */
+  sCarf(){
+    const s=this.state;
+    const carfOptions=[
+      { value:'no', label:'아니요, 국내에만 납세의무가 있어요', sub:'' },
+      { value:'yes', label:'네, 해외(미국 등) 납세의무가 있어요', sub:'해당 시 TIN 등 추가 서류를 요청드릴 수 있어요' },
+    ];
+    const cards=carfOptions.map(o=>`<button onclick="App.set('carf','${o.value}')" style="display:flex;align-items:center;gap:12px;padding:16px;border:none;border-radius:16px;text-align:left;cursor:pointer;${this.cardSel(o.value===s.carf)}">
+        <span style="${this.dotSel(o.value===s.carf)}"></span>
+        <span style="flex:1;display:flex;flex-direction:column;gap:3px"><span style="font-size:14px;font-weight:600;color:var(--text-primary)">${o.label}</span>${o.sub?`<span style="font-size:12px;color:var(--text-secondary)">${o.sub}</span>`:''}</span>
+      </button>`).join('');
+    return `<div style="${screenWrap}">
+      ${header('해외 납세의무 확인',false)}
+      <div style="${scroll}gap:16px">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="font-size:21px;font-weight:700;color:var(--text-primary);letter-spacing:-.01em">해외 납세의무가 있으신가요?</div>
+          <div style="font-size:13px;line-height:1.5;color:var(--text-secondary)">CARF(암호자산 자동정보교환) 규정에 따라 확인이 필요해요.</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px">${cards}</div>
+        <div style="display:flex;gap:8px;align-items:flex-start">
+          <span style="color:var(--text-secondary);display:flex;flex:none"><pp-icon name="globe" size="18" mark="var(--bg-default)"></pp-icon></span>
+          <span style="font-size:12px;line-height:1.5;color:var(--text-secondary)">국제 조세 규정(CARF) 준수를 위해 수집되며, 정확히 알려주셔야 해요.</span>
+        </div>
+      </div>
+      ${footer(btn({size:'xl',full:true,onclick:"App.go('review')",html:'확인 완료'}))}
+    </div>`;
+  },
+
+  /* S12 — 제출 전 확인 */
+  sReview(){
+    const s=this.state;
+    const rows=[
+      { label:'여권 영문 이름', value:s.engName||'GILDONG HONG', target:'personal' },
+      { label:'거주지 주소', value:s.addr||'서울특별시 강남구 …', target:'personal' },
+      { label:'직장명', value:'(주)가온테크', target:'required' },
+      { label:'거래 목적', value:s.purpose||'투자', target:'required' },
+    ];
+    const rowsHtml=rows.map(r=>`<div style="display:flex;align-items:center;gap:10px;padding:15px 16px;box-shadow:inset 0 -1px 0 var(--border-default)">
+        <div style="flex:1;display:flex;flex-direction:column;gap:3px"><span style="font-size:12px;color:var(--text-secondary)">${r.label}</span><span style="font-size:14px;font-weight:500;color:var(--text-primary)">${r.value}</span></div>
+        <button onclick="App.editRow('${r.target}')" style="border:none;background:transparent;color:var(--primary-default);font-family:var(--font-sans);font-size:13px;font-weight:500;cursor:pointer">수정</button>
+      </div>`).join('');
+    return `<div style="${screenWrap}">
+      ${header('제출 전 확인',false)}
+      <div style="${scroll}gap:16px">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="font-size:21px;font-weight:700;color:var(--text-primary);letter-spacing:-.01em">제출 전 확인해 주세요</div>
+          <div style="font-size:13px;line-height:1.5;color:var(--text-secondary)">틀린 곳은 지금 수정하세요. 제출 후 오류는 검수 반려 사유가 돼요.</div>
+        </div>
+        <div style="background:var(--bg-default);border-radius:18px;box-shadow:var(--ring-card);overflow:hidden">${rowsHtml}</div>
+        <div style="display:flex;gap:8px;align-items:center;background:var(--indigo-50);border-radius:12px;padding:12px 14px">
+          <span style="color:var(--indigo-600);display:flex;flex:none"><pp-icon name="shield-check" size="18" mark="var(--indigo-50)"></pp-icon></span>
+          <span style="font-size:12.5px;color:var(--indigo-700)">제출 후에는 검수가 시작돼 수정이 어려워요.</span>
+        </div>
+      </div>
+      ${footer(btn({size:'xl',full:true,onclick:'App.submit()',html:'제출하기 <pp-icon name="check" size="18"></pp-icon>'}))}
+    </div>`;
+  },
+
+  /* S13 — 제출 완료 */
+  sDone(){
+    return `<div style="${screenWrap}">
+      ${header('제출 완료',false)}
+      <div style="flex:1;min-height:0;overflow:auto;padding:28px 24px 20px;display:flex;flex-direction:column;align-items:center;gap:18px;text-align:center">
+        <div style="position:relative;width:96px;height:96px;display:grid;place-items:center">
+          <div style="position:absolute;width:96px;height:96px;border-radius:999px;box-shadow:0 0 0 2px var(--green-500);animation:pp-ring 2.6s ease-out infinite"></div>
+          <div style="position:absolute;width:96px;height:96px;border-radius:999px;box-shadow:0 0 0 2px var(--green-500);animation:pp-ring 2.6s ease-out infinite 1.3s"></div>
+          <div style="width:80px;height:80px;border-radius:999px;background:var(--semantic-success);display:grid;place-items:center;color:#fff;box-shadow:0 16px 30px -8px rgba(22,163,74,.55);animation:pp-pop .55s var(--ease-standard)"><pp-icon name="seal-check" size="46" mark="#16a34a"></pp-icon></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="font-size:22px;font-weight:700;color:var(--text-primary)">제출이 완료됐어요</div>
+          <div style="font-size:13px;line-height:1.6;color:var(--text-secondary)">검수는 보통 몇 분~수 시간 걸려요.<br>완료되면 푸시 알림으로 알려드릴게요.</div>
+        </div>
+        <div style="width:100%;display:flex;flex-direction:column;gap:6px;background:var(--bg-surface);border-radius:18px;padding:6px;text-align:left">
+          <div style="display:flex;align-items:center;gap:12px;padding:14px;background:var(--bg-default);border-radius:14px;box-shadow:var(--ring-card)">
+            <div style="width:40px;height:40px;flex:none;border-radius:12px;background:rgba(22,163,74,.1);display:grid;place-items:center;color:var(--semantic-success)"><pp-icon name="check-circle" size="22" mark="rgba(22,163,74,.1)"></pp-icon></div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:13.5px;font-weight:600;color:var(--text-primary)">지금 바로 가능</span><span style="font-size:12px;color:var(--text-secondary)">입출금 · 코인 마켓 거래</span></div>
+            <span style="font-size:11px;font-weight:600;color:var(--semantic-success);background:rgba(22,163,74,.1);border-radius:999px;padding:4px 9px">이용 중</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;padding:10px 14px 12px">
+            <div style="width:40px;height:40px;flex:none;border-radius:12px;background:var(--bg-default);box-shadow:inset 0 0 0 1px var(--border-default);display:grid;place-items:center;color:var(--text-secondary)"><pp-icon name="clock" size="20" mark="var(--bg-surface)"></pp-icon></div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font-size:13.5px;font-weight:600;color:var(--text-primary)">검수 완료 후</span><span style="font-size:12px;color:var(--text-secondary)">원화 마켓 전체 기능</span></div>
+            <span style="font-size:11px;font-weight:500;color:var(--text-secondary)">대기</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary)"><pp-icon name="bell" size="14" mark="var(--bg-default)"></pp-icon> 검수 결과는 알림과 이메일로 보내드려요</div>
+      </div>
+      ${footer(btn({size:'xl',full:true,onclick:'App.goHome()',html:'홈으로'}))}
+    </div>`;
+  },
+
+  /* 나중에 / 단계적 제한 */
+  sLater(){
+    return `<div style="${screenWrap}">
+      ${header('고객확인 재이행',false)}
+      <div style="${scroll}gap:16px">
+        <div style="font-size:21px;font-weight:700;color:var(--text-primary);letter-spacing:-.01em">나중에 하시겠어요?</div>
+        <div style="display:flex;align-items:center;gap:14px;background:var(--indigo-50);border-radius:18px;padding:16px">
+          <div style="width:64px;height:64px;flex:none;border-radius:16px;background:linear-gradient(150deg,var(--indigo-500),var(--indigo-700));display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;box-shadow:0 12px 22px -8px rgba(67,56,202,.5)"><span style="font-size:12px;font-weight:600;opacity:.85;letter-spacing:.04em">D-</span><span style="font-size:24px;font-weight:700;line-height:1">23</span></div>
+          <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:15px;font-weight:600;color:var(--text-primary)">11월 3일까지 완료하면 돼요</span><span style="font-size:12px;color:var(--text-secondary)">기한까지 평소처럼 이용할 수 있어요</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px;background:var(--bg-surface);border-radius:16px;padding:16px">
+          <span style="font-size:13px;font-weight:600;color:var(--text-primary)">기한이 지나면 단계적으로 제한돼요</span>
+          <div style="display:flex;align-items:center;gap:7px">
+            <span style="background:var(--bg-default);box-shadow:inset 0 0 0 1px var(--border-default);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--text-primary)">매매</span>
+            <span style="color:var(--zinc-400);display:flex"><pp-icon name="caret-right" size="14"></pp-icon></span>
+            <span style="background:var(--bg-default);box-shadow:inset 0 0 0 1px var(--border-default);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--text-primary)">입출금</span>
+            <span style="color:var(--zinc-400);display:flex"><pp-icon name="caret-right" size="14"></pp-icon></span>
+            <span style="background:var(--bg-default);box-shadow:inset 0 0 0 1px var(--border-default);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--text-primary)">서비스</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-secondary)"><pp-icon name="shield-check" size="14" mark="var(--bg-default)"></pp-icon> 모든 사용자에게 동일하게 적용되는 정책이에요</div>
+      </div>
+      <div style="flex:none;padding:10px 22px 28px;display:flex;gap:10px;background:linear-gradient(to top,var(--bg-default) 72%,rgba(255,255,255,0))">
+        <div style="flex:1">${btn({variant:'secondary',size:'xl',full:true,onclick:'App.remindLater()',html:'나중에 알림 받기'})}</div>
+        <div style="flex:1">${btn({size:'xl',full:true,onclick:'App.doNow()',html:'지금 하기'})}</div>
+      </div>
+    </div>`;
+  },
+
+  /* ── overlays: consent / exit / acct-help / select sheet / loading / toast ── */
+  overlays(){
+    const s=this.state; let out='';
+
+    if(s.consentSheet){
+      const introAllOn=this.introAllOn();
+      const introItems=[
+        { key:'trade', label:'(필수) 거래 유의사항 확인' },
+        { key:'credit', label:'(필수) 개인(신용)정보 수집·이용 동의' },
+        { key:'unique', label:'(필수) 고유식별정보 처리 동의' },
+      ];
+      const itemsHtml=introItems.map(it=>`<button onclick="App.toggleIntro('${it.key}')" style="display:flex;align-items:center;gap:12px;width:100%;border:none;background:transparent;padding:9px 2px;cursor:pointer;text-align:left">
+          <span style="${this.itemCheck(s.introAgree[it.key])}"><pp-icon name="check" size="14"></pp-icon></span>
+          <span style="flex:1;font-size:14px;color:var(--text-primary)">${it.label}</span>
+          <span style="color:var(--zinc-400);display:flex"><pp-icon name="caret-right" size="16"></pp-icon></span>
+        </button>`).join('');
+      out+=bottomSheet({ title:'약관에 동의해 주세요', onClose:'App.closeConsent()', html:`
+        <div style="display:flex;flex-direction:column;gap:14px;padding-bottom:4px">
+          <button onclick="App.toggleIntroAll()" style="display:flex;align-items:center;gap:12px;width:100%;border:none;background:var(--bg-surface);border-radius:14px;padding:14px;cursor:pointer;text-align:left">
+            <span style="${this.circleSel(introAllOn)}"><pp-icon name="check" size="15"></pp-icon></span>
+            <span style="flex:1;font-size:16px;font-weight:700;color:var(--text-primary)">전체 동의</span>
+          </button>
+          <div style="display:flex;flex-direction:column;gap:2px;padding:0 4px">${itemsHtml}</div>
+          <div style="font-size:12px;line-height:1.5;color:var(--text-secondary);padding:0 4px">특정 금융거래정보법 제5조의2에 따른 필수 수집 항목이에요. 거부하면 안전한 거래를 위해 서비스 이용이 제한될 수 있어요.</div>
+          ${btn({size:'xl',full:true,disabled:!introAllOn,onclick:'App.agreeAndStart()',html:'동의하고 시작하기'})}
+        </div>`});
+    }
+
+    if(s.exitSheet){
+      out+=bottomSheet({ title:'나중에 하시겠어요?', onClose:'App.closeExit()', html:`
+        <div style="display:flex;flex-direction:column;gap:16px;padding-bottom:4px">
+          <div style="display:flex;align-items:center;gap:14px;background:var(--indigo-50);border-radius:18px;padding:16px">
+            <div style="width:64px;height:64px;flex:none;border-radius:16px;background:linear-gradient(150deg,var(--indigo-500),var(--indigo-700));display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;box-shadow:0 12px 22px -8px rgba(67,56,202,.5)"><span style="font-size:12px;font-weight:600;opacity:.85;letter-spacing:.04em">D-</span><span style="font-size:24px;font-weight:700;line-height:1">23</span></div>
+            <div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:15px;font-weight:600;color:var(--text-primary)">11월 3일까지 완료하면 돼요</span><span style="font-size:12px;color:var(--text-secondary)">여기까지 입력한 내용은 저장돼요</span></div>
+          </div>
+          <div style="font-size:13px;line-height:1.6;color:var(--text-secondary)">기한이 지나면 <strong style="color:var(--text-primary)">매매 → 입출금 → 서비스</strong> 순으로 단계적으로 제한돼요. 모든 사용자에게 동일하게 적용되는 정책이에요.</div>
+          <div style="display:flex;gap:10px">
+            <div style="flex:1">${btn({variant:'secondary',size:'xl',full:true,onclick:'App.exitNow()',html:'나중에 알림 받기'})}</div>
+            <div style="flex:1">${btn({size:'xl',full:true,onclick:'App.closeExit()',html:'계속 진행하기'})}</div>
+          </div>
+        </div>`});
+    }
+
+    if(s.acctHelp){
+      const steps=[
+        '연결된 은행 앱이나 문자에서 입금 내역을 열어요.',
+        "1원 입금자명 <strong>‘파라파라’ 앞 숫자 3자리</strong>를 확인해요.",
+        '그 숫자 3자리를 입력하면 인증이 완료돼요.',
+      ];
+      out+=bottomSheet({ title:'인증번호는 어떻게 확인하나요?', onClose:'App.closeAcctHelp()', html:`
+        <div style="display:flex;flex-direction:column;gap:14px;padding-bottom:4px">
+          ${steps.map((t,i)=>`<div style="display:flex;gap:12px"><span style="width:24px;height:24px;flex:none;border-radius:999px;background:var(--primary-default);color:#fff;display:grid;place-items:center;font-size:13px;font-weight:700">${i+1}</span><span style="font-size:14px;line-height:1.5;color:var(--text-primary)">${t}</span></div>`).join('')}
+        </div>`});
+    }
+
+    if(s.sheet){
+      const sd=this.sheetData();
+      if(sd){
+        const opts=sd.options.map((o,i)=>`<button onclick="App.pickSheet(${i})" style="display:flex;align-items:center;justify-content:space-between;gap:10px;height:52px;padding:0 16px;border:none;border-radius:14px;background:var(--bg-surface);font-family:var(--font-sans);font-size:15px;font-weight:500;color:var(--text-primary);cursor:pointer;text-align:left">
+            <span>${o}</span>${o===sd.current?'<span style="color:var(--primary-default);display:flex"><pp-icon name="check" size="20"></pp-icon></span>':''}
+          </button>`).join('');
+        out+=bottomSheet({ title:sd.title, onClose:'App.closeSheet()', html:`<div style="display:flex;flex-direction:column;gap:6px;max-height:330px;overflow:auto">${opts}</div>`});
+      }
+    }
+
+    if(s.loading){
+      out+=`<div style="position:absolute;inset:0;z-index:50;background:rgba(255,255,255,.78);backdrop-filter:blur(3px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;animation:pp-fade .2s ease">
+        ${spinner(42)}
+        <div style="font-size:14px;font-weight:500;color:var(--text-secondary)">${s.loadingText}</div>
+      </div>`;
+    }
+
+    if(s.toast){
+      out+=`<div style="position:absolute;left:0;right:0;bottom:40px;z-index:60;display:flex;justify-content:center;padding:0 22px;animation:pp-toast-in .26s var(--ease-standard)">
+        <div role="status" style="display:flex;align-items:center;min-height:41px;max-width:343px;width:100%;padding:12px 16px;background:var(--bg-inverse);color:var(--text-inverse);border-radius:var(--r-md);box-shadow:var(--shadow-overlay);font-family:var(--font-sans);font-size:14px;line-height:1.4;box-sizing:border-box">
+          <span style="display:inline-flex;align-items:center;gap:8px"><span style="color:var(--semantic-success);display:flex"><pp-icon name="check-circle" size="18" mark="var(--bg-inverse)"></pp-icon></span>${s.toast}</span>
+        </div>
+      </div>`;
+    }
+    return out;
+  },
+};
+
+/* ── alternative intro layouts B / C / D (static reference) ── */
+function altCard(badgeTitle, sub, inner, foot){
+  return `<div style="display:flex;flex-direction:column;gap:12px;align-items:center">
+    <div style="text-align:center;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:600;color:var(--text-primary)">${badgeTitle}</span><span style="font-size:12px;color:var(--text-secondary);max-width:300px">${sub}</span></div>
+    <div style="width:320px;height:600px;border-radius:38px;background:var(--bg-default);box-shadow:0 24px 56px -18px rgba(9,9,11,.28),inset 0 0 0 1px var(--border-default);overflow:hidden;display:flex;flex-direction:column">
+      <div style="height:42px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:12px;font-weight:600;color:var(--text-primary)"><span>9:41</span><span style="color:var(--text-secondary)">LTE</span></div>
+      ${inner}
+      ${foot}
+    </div>
+  </div>`;
+}
+document.getElementById('alts').innerHTML = [
+  altCard('B · 타임라인형','앞으로의 단계를 한눈에 — 절차 투명성으로 불안을 낮춰요',
+    `<div style="flex:1;min-height:0;padding:14px 22px;display:flex;flex-direction:column;gap:18px;overflow:hidden">
+      <div style="align-self:flex-start;display:inline-flex;align-items:center;gap:6px;background:var(--bg-muted);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--text-on-muted)"><pp-icon name="shield-check" size="14" mark="var(--bg-muted)"></pp-icon>보안 · 규제 안내</div>
+      <div style="font-size:22px;line-height:1.32;font-weight:700;color:var(--text-primary)">고객확인을<br>다시 한 번 확인할게요</div>
+      <div style="position:relative;display:flex;flex-direction:column;gap:18px;margin-top:2px">
+        <div style="position:absolute;left:19px;top:20px;bottom:20px;width:2px;background:var(--border-default)"></div>
+        ${[['device-mobile','본인 인증','통신사 · PASS'],['identification-card','신분증 · 얼굴 확인','모바일 신분증 또는 촬영'],['pencil','정보 입력 · 계좌','영문명 · 주소 · 1원 인증'],['check-circle','제출 · 검수','보통 몇 분~수 시간']].map(([ic,t,sub])=>`<div style="display:flex;align-items:center;gap:14px;position:relative"><span style="width:40px;height:40px;flex:none;border-radius:13px;background:var(--indigo-50);display:grid;place-items:center;color:var(--indigo-600)"><pp-icon name="${ic}" size="22" mark="var(--indigo-50)"></pp-icon></span><div style="display:flex;flex-direction:column;gap:1px"><span style="font-size:14px;font-weight:600;color:var(--text-primary)">${t}</span><span style="font-size:12px;color:var(--text-secondary)">${sub}</span></div></div>`).join('')}
+      </div>
+      <div style="margin-top:auto;display:flex;align-items:center;gap:8px;background:var(--bg-surface);border-radius:12px;padding:11px 14px"><span style="color:var(--text-secondary);display:flex"><pp-icon name="clock" size="18" mark="var(--bg-surface)"></pp-icon></span><span style="font-size:13px;color:var(--text-primary)">입력 약 <strong>3분</strong> · 심사는 별도예요</span></div>
+    </div>`,
+    `<div style="flex:none;padding:8px 22px 22px"><div style="height:52px;border-radius:16px;background:var(--primary-default);color:var(--primary-foreground);display:flex;align-items:center;justify-content:center;gap:8px;font-size:16px;font-weight:600">지금 시작하기 <pp-icon name="arrow-right" size="18"></pp-icon></div></div>`),
+
+  altCard('C · 신뢰 강조형','하나의 초점과 신뢰 신호 — 감정적 안심을 우선 (현재 프로토타입)',
+    `<div style="flex:1;min-height:0;padding:8px 24px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:18px;overflow:hidden">
+      <div style="height:180px;flex:none;display:grid;place-items:center;position:relative;perspective:700px">
+        <div style="position:absolute;width:170px;height:170px;border-radius:50%;background:radial-gradient(circle,rgba(99,102,241,.4),rgba(99,102,241,0) 68%);filter:blur(6px);animation:pp-glow 4.5s ease-in-out infinite"></div>
+        <div style="width:108px;height:108px;border-radius:28px;background:linear-gradient(150deg,var(--indigo-500),var(--indigo-800));display:grid;place-items:center;color:#fff;box-shadow:0 24px 40px -8px rgba(67,56,202,.55),inset 0 2px 3px rgba(255,255,255,.4);transform-style:preserve-3d;animation:pp-float 4.5s ease-in-out infinite"><pp-icon name="shield-check" size="56" mark="#4338ca"></pp-icon></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px"><div style="font-size:23px;line-height:1.3;font-weight:700;color:var(--text-primary)">안전하게,<br>다시 한 번 확인할게요</div><div style="font-size:13px;line-height:1.6;color:var(--text-secondary)">1년 주기 정기 절차예요.<br>입력 정보는 본인 확인에만 쓰여요.</div></div>
+      <div style="display:flex;gap:8px;margin-top:2px">
+        ${[['lock','암호화'],['clock','약 3분'],['shield-check','규제 준수']].map(([ic,t])=>`<div style="display:flex;flex-direction:column;align-items:center;gap:6px;background:var(--bg-surface);border-radius:14px;padding:12px 14px;flex:1"><span style="color:var(--indigo-600);display:flex"><pp-icon name="${ic}" size="20" mark="var(--bg-surface)"></pp-icon></span><span style="font-size:11px;font-weight:600;color:var(--text-primary)">${t}</span></div>`).join('')}
+      </div>
+    </div>`,
+    `<div style="flex:none;padding:8px 22px 22px;display:flex;flex-direction:column;gap:6px"><div style="height:52px;border-radius:16px;background:var(--primary-default);color:var(--primary-foreground);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600">지금 시작하기</div><div style="height:40px;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--text-secondary)">나중에 하기</div></div>`),
+
+  altCard('D · 준비물 카드형','필요한 것을 시각적으로 — 스캔하기 쉬운 카드',
+    `<div style="flex:1;min-height:0;padding:14px 22px;display:flex;flex-direction:column;gap:16px;overflow:hidden">
+      <div style="font-size:22px;line-height:1.32;font-weight:700;color:var(--text-primary)">준비물을 확인하고<br>시작해요</div>
+      <div style="display:flex;gap:12px">
+        <div style="flex:1;display:flex;flex-direction:column;gap:10px;background:linear-gradient(160deg,var(--indigo-50),var(--bg-surface));border-radius:18px;padding:16px;box-shadow:var(--ring-card)"><span style="width:44px;height:44px;border-radius:13px;background:var(--primary-default);display:grid;place-items:center;color:#fff"><pp-icon name="identification-card" size="24"></pp-icon></span><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:600;color:var(--text-primary)">신분증</span><span style="font-size:11px;color:var(--text-secondary);line-height:1.4">주민등록증 또는 운전면허증</span></div></div>
+        <div style="flex:1;display:flex;flex-direction:column;gap:10px;background:linear-gradient(160deg,var(--indigo-50),var(--bg-surface));border-radius:18px;padding:16px;box-shadow:var(--ring-card)"><span style="width:44px;height:44px;border-radius:13px;background:var(--primary-default);display:grid;place-items:center;color:#fff"><pp-icon name="bank" size="24"></pp-icon></span><div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:600;color:var(--text-primary)">본인 계좌</span><span style="font-size:11px;color:var(--text-secondary);line-height:1.4">입출금 가능한 계좌</span></div></div>
+      </div>
+      <div style="display:flex;gap:12px;background:var(--indigo-50);border-radius:16px;padding:14px;box-shadow:inset 0 0 0 1px rgba(99,102,241,.22)"><span style="width:30px;height:30px;flex:none;border-radius:10px;background:var(--primary-default);display:grid;place-items:center;color:#fff"><pp-icon name="sparkle" size="16"></pp-icon></span><div style="display:flex;flex-direction:column;gap:3px"><span style="font-size:13px;font-weight:600;color:var(--indigo-700)">왜 다시 하나요?</span><span style="font-size:12px;line-height:1.5;color:var(--indigo-600)">1년 주기 갱신 시점이에요. 안전한 거래를 위한 정기 절차입니다.</span></div></div>
+      <div style="margin-top:auto;display:flex;align-items:center;gap:8px;background:var(--bg-surface);border-radius:12px;padding:11px 14px"><span style="color:var(--text-secondary);display:flex"><pp-icon name="clock" size="18" mark="var(--bg-surface)"></pp-icon></span><span style="font-size:13px;color:var(--text-primary)">입력 약 <strong>3분</strong> · 심사는 별도예요</span></div>
+    </div>`,
+    `<div style="flex:none;padding:8px 22px 22px"><div style="height:52px;border-radius:16px;background:var(--primary-default);color:var(--primary-foreground);display:flex;align-items:center;justify-content:center;gap:8px;font-size:16px;font-weight:600">지금 시작하기 <pp-icon name="arrow-right" size="18"></pp-icon></div></div>`),
+].join('');
+
+/* accent swatches */
+document.querySelectorAll('.swatch').forEach(el=>el.addEventListener('click',()=>App.applyAccent(el.dataset.accent)));
+App.applyAccent('#4338ca');
+App.render();
+</script>
+</body>
+</html>

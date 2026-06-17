@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>거래소 A 고객확인 재이행 — 와이어프레임 시안 3종</title>
+<style>
+/* ===== 토큰 (design-system-exchange-a.md §1~4, 라이트) ===== */
+:root{
+  --background:#ffffff; --surface:#fafafa; --foreground:#09090b;
+  --muted-fg:#71717a; --disabled:#a1a1aa; --muted:#f4f4f5;
+  --border:#e4e4e7; --input:#e4e4e7; --ring:#a1a1aa;
+  --primary:#4338ca; --primary-fg:#eef2ff;
+  --success:#16a34a; --warning:#d97706; --error:#dc2626; --info:#2563eb;
+  --r-sm:6px; --r-base:10px; --r-lg:14px; --r-xl:16px; --r-2xl:24px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:Inter,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  background:var(--surface); color:var(--foreground); line-height:1.5; font-size:16px;
+  padding:32px 24px 80px;
+}
+.wrap{max-width:1280px;margin:0 auto}
+
+/* ===== 보드 헤더 ===== */
+.board-head{margin-bottom:32px}
+.board-head h1{font-size:24px;font-weight:700;line-height:1.3;margin-bottom:8px}
+.board-head .meta{font-size:14px;color:var(--muted-fg)}
+.board-head .meta code{background:var(--muted);padding:1px 6px;border-radius:var(--r-sm);font-size:13px}
+
+/* ===== 가설 카드 3종 ===== */
+.hypo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+.hypo{background:#fff;border-radius:var(--r-2xl);padding:20px;box-shadow:0 0 0 1px rgb(9 9 11/.05),0 1px 2px rgb(0 0 0/.05)}
+.hypo .tag{display:inline-block;font-size:12px;font-weight:600;padding:3px 10px;border-radius:999px;margin-bottom:10px}
+.hypo h2{font-size:18px;font-weight:600;line-height:1.45;margin-bottom:8px}
+.hypo p{font-size:14px;line-height:1.55;color:var(--muted-fg)}
+.hypo p b{color:var(--foreground);font-weight:600}
+.hypo .risk{margin-top:10px;font-size:13px;color:var(--warning)}
+.t1 .tag{background:rgb(67 56 202/.1);color:var(--primary)}
+.t2 .tag{background:rgb(22 163 74/.1);color:var(--success)}
+.t3 .tag{background:rgb(217 119 6/.12);color:var(--warning)}
+
+/* ===== 분기 매트릭스 ===== */
+.matrix{width:100%;border-collapse:collapse;background:#fff;border-radius:var(--r-2xl);overflow:hidden;box-shadow:0 0 0 1px rgb(9 9 11/.05);margin-bottom:48px;font-size:13.5px}
+.matrix th,.matrix td{padding:10px 14px;text-align:left;border-bottom:1px solid var(--muted);vertical-align:top}
+.matrix th{background:var(--muted);font-weight:600;font-size:13px}
+.matrix td:first-child{font-weight:600;white-space:nowrap;color:var(--muted-fg)}
+.matrix tr:last-child td{border-bottom:none}
+
+/* ===== 화면 행 ===== */
+.screen-row{margin-bottom:56px}
+.screen-row>h3{font-size:20px;font-weight:600;margin-bottom:4px}
+.screen-row>.sub{font-size:14px;color:var(--muted-fg);margin-bottom:20px}
+.frames{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;align-items:start}
+.frame-col{display:flex;flex-direction:column;align-items:center;gap:10px}
+.frame-cap{font-size:13px;color:var(--muted-fg);text-align:center;max-width:375px;line-height:1.5}
+.frame-cap b{color:var(--foreground);font-weight:600}
+
+/* ===== 폰 프레임 (375px) ===== */
+.phone{width:375px;background:#fff;border-radius:28px;box-shadow:0 0 0 1px var(--border),0 4px 12px rgb(0 0 0/.08);overflow:hidden;position:relative}
+.topbar{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid var(--muted)}
+.topbar .tt{font-size:18px;font-weight:600}
+.topbar .ic{width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:var(--muted-fg);font-size:18px}
+.body{padding:16px}
+
+/* 진행 표시 R3 A안 (4분모, 공통) */
+.prog{padding:12px 16px 0}
+.prog .segs{display:flex;gap:4px;margin-bottom:6px}
+.prog .seg{height:4px;flex:1;border-radius:2px;background:var(--muted)}
+.prog .seg.on{background:var(--primary)}
+.prog .lab{font-size:12px;color:var(--muted-fg)}
+.prog .lab b{color:var(--primary);font-weight:600}
+
+/* 공통 요소 */
+.banner{display:flex;gap:8px;padding:12px 14px;border-radius:var(--r-base);font-size:14px;line-height:1.5;margin-bottom:16px}
+.banner.info{background:rgb(37 99 235/.08);color:#1e40af}
+.banner.warn{background:rgb(217 119 6/.1);color:#92400e}
+.h-disp{font-size:24px;font-weight:700;line-height:1.3;margin-bottom:6px}
+.h-sub{font-size:14px;color:var(--muted-fg);margin-bottom:20px}
+.card{background:#fff;border-radius:var(--r-2xl);box-shadow:0 0 0 1px rgb(9 9 11/.07);padding:16px;margin-bottom:16px}
+.card h4{font-size:14px;font-weight:600;margin-bottom:10px;color:var(--muted-fg)}
+.chkrow{display:flex;align-items:center;gap:10px;min-height:44px;font-size:16px}
+.chk{width:20px;height:20px;border-radius:var(--r-sm);background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;flex:none}
+.chk.off{background:rgb(228 228 231/.9);color:transparent}
+.chkrow .hint{font-size:12px;color:var(--muted-fg)}
+.steps-mini{display:flex;flex-direction:column;gap:0}
+.steps-mini .s{display:flex;align-items:center;gap:10px;min-height:44px;border-bottom:1px solid var(--muted);font-size:15px}
+.steps-mini .s:last-child{border-bottom:none}
+.steps-mini .n{width:24px;height:24px;border-radius:50%;background:var(--muted);color:var(--muted-fg);font-size:12px;font-weight:600;display:flex;align-items:center;justify-content:center;flex:none}
+.steps-mini .time{margin-left:auto;font-size:12px;color:var(--muted-fg);font-variant-numeric:tabular-nums}
+.btn{display:flex;align-items:center;justify-content:center;width:100%;border-radius:var(--r-xl);font-weight:600;cursor:pointer}
+.btn.xl{height:56px;background:var(--primary);color:var(--primary-fg);font-size:16px}
+.btn.lg2{height:48px;background:var(--muted);color:#18181b;font-size:16px}
+.btn.ghost{height:48px;background:transparent;color:var(--foreground);font-size:16px}
+.btn.dis{opacity:.5}
+.btn+.btn{margin-top:8px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.chip{height:24px;display:inline-flex;align-items:center;padding:0 10px;border-radius:999px;font-size:12px;font-weight:500;background:var(--muted);color:#18181b}
+.chip.warn{background:rgb(217 119 6/.1);color:var(--warning)}
+.chip.info{background:rgb(37 99 235/.08);color:var(--info)}
+.input{height:48px;border-radius:var(--r-xl);background:rgb(228 228 231/.5);display:flex;align-items:center;padding:0 16px;font-size:16px;color:var(--muted-fg);margin-bottom:8px}
+.code6{display:flex;gap:8px;margin-bottom:12px}
+.code6 .d{flex:1;height:56px;border-radius:var(--r-lg);background:rgb(228 228 231/.5);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700}
+.cap{font-size:12px;color:var(--muted-fg);line-height:1.4}
+.link{color:var(--primary);font-weight:600;text-decoration:none;font-size:14px}
+.rowlist{display:flex;flex-direction:column}
+.rowlist .r{display:flex;align-items:center;min-height:52px;border-bottom:1px solid var(--muted);gap:8px}
+.rowlist .r:last-child{border-bottom:none}
+.rowlist .k{font-size:13px;color:var(--muted-fg);width:84px;flex:none}
+.rowlist .v{font-size:15px;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rowlist .edit{font-size:13px;font-weight:600;color:var(--primary);flex:none;padding:8px 0 8px 8px}
+.badge-w{height:20px;display:inline-flex;align-items:center;padding:0 8px;border-radius:999px;font-size:11px;font-weight:600;background:rgb(217 119 6/.1);color:var(--warning);flex:none}
+
+/* 타임라인 (R2) */
+.tl{position:relative;padding-left:24px;margin:4px 0 8px}
+.tl::before{content:"";position:absolute;left:7px;top:8px;bottom:8px;width:2px;background:var(--border)}
+.tl .ev{position:relative;padding:6px 0 14px}
+.tl .ev:last-child{padding-bottom:2px}
+.tl .dot{position:absolute;left:-24px;top:10px;width:16px;height:16px;border-radius:50%;background:#fff;border:2px solid var(--border)}
+.tl .ev.now .dot{border-color:var(--success);background:var(--success)}
+.tl .ev.w1 .dot{border-color:var(--warning)}
+.tl .ev.w2 .dot{border-color:var(--error)}
+.tl .when{font-size:12px;font-weight:600;color:var(--muted-fg);font-variant-numeric:tabular-nums}
+.tl .what{font-size:14px;line-height:1.45}
+.tl .ev.now .when{color:var(--success)}
+.tl .ev.w1 .when{color:var(--warning)}
+.tl .ev.w2 .when{color:var(--error)}
+
+/* 바텀시트 목업 */
+.dim{position:absolute;inset:0;background:rgb(0 0 0/.4);display:flex;align-items:flex-end}
+.sheet{background:#fff;border-radius:24px 24px 0 0;width:100%;padding:8px 16px 20px;box-shadow:0 4px 12px rgb(0 0 0/.08)}
+.sheet .handle{width:36px;height:4px;border-radius:2px;background:var(--border);margin:4px auto 14px}
+.sheet h4{font-size:18px;font-weight:600;margin-bottom:4px}
+.sheet .desc{font-size:14px;color:var(--muted-fg);margin-bottom:12px}
+.sheet .act{display:flex;align-items:center;gap:10px;min-height:52px;border-bottom:1px solid var(--muted);font-size:15px}
+.sheet .act:last-of-type{border-bottom:none}
+.sheet .act .sub{margin-left:auto;font-size:13px;color:var(--muted-fg)}
+
+/* 홈 배너 미니 */
+.home-strip{background:var(--muted);border-radius:var(--r-base);padding:12px 14px;display:flex;align-items:center;gap:10px;font-size:14px;margin-bottom:16px}
+.home-strip .dday{font-weight:700;color:var(--primary);font-variant-numeric:tabular-nums;flex:none}
+.ph-block{background:var(--muted);border-radius:var(--r-base);margin-bottom:8px;display:flex;align-items:center;justify-content:center;color:var(--disabled);font-size:13px}
+
+/* 아코디언 */
+.acc .sec{border:1px solid var(--muted);border-radius:var(--r-lg);margin-bottom:8px;overflow:hidden}
+.acc .hd{display:flex;align-items:center;gap:10px;min-height:52px;padding:0 14px;font-size:15px;font-weight:600;background:#fff}
+.acc .hd .st{margin-left:auto;font-size:13px;font-weight:500;color:var(--success)}
+.acc .hd .st.w{color:var(--warning)}
+.acc .hd .ar{color:var(--disabled);font-size:13px}
+.acc .bd{border-top:1px solid var(--muted);padding:4px 14px;background:var(--surface)}
+
+/* 인터스티셜 */
+.inter-ic{width:64px;height:64px;border-radius:20px;background:rgb(67 56 202/.08);display:flex;align-items:center;justify-content:center;font-size:28px;margin:24px auto 16px}
+.qa{display:flex;flex-direction:column;gap:12px;margin-bottom:20px}
+.qa .q{display:flex;gap:10px;font-size:14px;line-height:1.5}
+.qa .q .i{flex:none;width:20px;text-align:center}
+.qa .q b{font-weight:600}
+
+footer.note{font-size:13px;color:var(--muted-fg);border-top:1px solid var(--border);padding-top:16px;line-height:1.7}
+
+@media (max-width:1240px){.frames{grid-template-columns:1fr}.frame-col{align-items:center}.hypo-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="board-head">
+  <h1>거래소 A 고객확인 재이행 — 와이어프레임 시안 3종</h1>
+  <p class="meta">입력: <code>exchange-a-kyc-reverification-prd.md</code> (v3) · <code>kyc-reverification-references/references.md</code> · <code>design-system-exchange-a.md</code><br>
+  스코프: 모바일 375px · 분기 화면 5장 × 시안 3종. 진행 표시(R3)는 A안(4분모+세부 병행) 확정이라 전 시안 공통. 익명화: '거래소 A'.</p>
+</header>
+
+<!-- ===================== 가설 3종 ===================== -->
+<div class="hypo-grid">
+  <div class="hypo t1">
+    <span class="tag">시안 1 · 준비 체크리스트형</span>
+    <h2>"막힘은 준비 없이 시작해서 생긴다"</h2>
+    <p><b>가설</b>: 시작 전에 사유·준비물·소요 시간을 완결적으로 주면 중도 막힘 자체가 줄어 완주율이 오른다. <b>상황 B(복귀 시 도래)</b> 사용자 우선. 레퍼런스: Sleeper(시간 약속)+Prodigy(사유 배너)+Coinbase(체크리스트) 합성 — 셋을 다 갖춘 곳은 업계에 없음.</p>
+    <p class="risk">리스크: 첫 화면이 무거워 "빨리 시작"파(상황 A)에게 마찰.</p>
+  </div>
+  <div class="hypo t2">
+    <span class="tag">시안 2 · 현행 골격 보존형</span>
+    <h2>"문제는 구조가 아니라 안내 부재다"</h2>
+    <p><b>가설</b>: 기존 멘탈모델(4단계 카드)을 그대로 두고 안내 레이어만 얹으면 학습 비용 0으로 불만이 해소된다. AS-IS와 골격을 공유해 <b>R9 토글 구현 부담 최소</b> + "구조는 그대로, 안내만 더했다" 발표 스토리에 최적.</p>
+    <p class="risk">리스크: 변화 임팩트가 작아 보임. 바텀시트 안내는 닫으면 사라짐.</p>
+  </div>
+  <div class="hypo t3">
+    <span class="tag">시안 3 · 기한 타임라인형</span>
+    <h2>"첫 질문은 '언제까지, 뭐가 막히나'다"</h2>
+    <p><b>가설</b>: <b>상황 A(거래 중 도래)</b> 사용자의 의사결정(지금 vs 나중)을 먼저 지원하면, 나중을 골라도 기한 내 복귀율이 오른다. D-day와 단계적 제한 타임라인을 히어로로 — 레퍼런스 부재 영역(핵심 발견 3)의 정면 돌파. 카피는 토스식 돌봄 프레이밍.</p>
+    <p class="risk">리스크: 공포 소구로 읽힐 위험(코인원 "반협박" 역효과 증거) — Voice §7 충돌 주의.</p>
+  </div>
+</div>
+
+<!-- ===================== 분기 매트릭스 ===================== -->
+<table class="matrix">
+  <tr><th>분기 지점</th><th>시안 1 · 준비 체크리스트형</th><th>시안 2 · 현행 골격 보존형</th><th>시안 3 · 기한 타임라인형</th></tr>
+  <tr><td>R1·R2 진입</td><td>소요시간 헤드라인 + 준비물 체크리스트 풀스크린 (핸드오프 방향 A)</td><td>AS-IS 4카드 유지 + 사유 배너·메타 칩 (방향 B)</td><td>D-day·제한 타임라인 히어로, 준비물은 하위 (방향 C)</td></tr>
+  <tr><td>R2 나중에 하기</td><td>바텀시트로 기한+제한 고지 후 홈 배너</td><td>홈 상단 접이식 기한 배너 (가장 가벼움)</td><td>"알림 예약"으로 재해석 — D-7·D-1 리마인드 약속</td></tr>
+  <tr><td>R4·R5 복구</td><td>인라인 복구형 — 출구 전부 화면 안 (Klarna+Substack+Zora)</td><td>복구 바텀시트형 — 본 화면 유지 (방향 B)</td><td>인라인 + 기한 컨텍스트 라인 ("서두르지 않아도 돼요")</td></tr>
+  <tr><td>R6 핸드오프</td><td>풀스크린 인터스티셜 (Coinbase Plaid)</td><td>인라인 노트 (Mercury)</td><td>인터스티셜 + 외부 소요를 기한 대비로 환산</td></tr>
+  <tr><td>R13 검토</td><td>행 단위 편집 + 빈발 항목 경고 칩 (Capital One)</td><td>STEP별 아코디언 + 섹션 수정 (방향 B)</td><td>행 단위 편집 + 반려 비용을 기한으로 설명</td></tr>
+  <tr><td>핵심 베팅</td><td>정보 완결성 — 한 번에 끝내게 한다</td><td>최소 개입 — 전후 대비를 가장 깨끗하게 보여준다</td><td>예측 가능성 — 기한 의사결정을 1급 시민으로</td></tr>
+</table>
+
+<!-- ===================== 화면 1: 진입 (R1·R2) ===================== -->
+<section class="screen-row">
+  <h3>화면 1 — 시작 전 안내 · 진입 (R1·R2)</h3>
+  <p class="sub">시안이 가장 갈라져야 하는 화면(레퍼런스 공백 영역). 공통 요구: 사유 + 준비물 + 단계 수 + 소요 시간 + 나중에 하기.</p>
+  <div class="frames">
+
+    <!-- 1-1 -->
+    <div class="frame-col">
+      <div class="phone">
+        <div class="topbar"><span class="ic">‹</span><span class="tt">고객확인 재이행</span><span class="ic">?</span></div>
+        <div class="body">
+          <div class="banner info">ⓘ&nbsp;금융정보법에 따라 1년마다 고객 정보를 다시 확인해요</div>
+          <div class="h-disp">입력은 약 3분이면 끝나요</div>
+          <p class="h-sub">제출 후 검수 결과는 푸시로 따로 알려드려요</p>
+          <div class="card">
+            <h4>시작 전에 준비해 주세요</h4>
+            <div class="chkrow"><span class="chk">✓</span><div>신분증<div class="hint">주민등록증 또는 운전면허증 실물</div></div></div>
+            <div class="chkrow"><span class="chk off">✓</span><div>본인 명의 은행 계좌<div class="hint">1원 입금 확인에 사용해요</div></div></div>
+          </div>
+          <div class="card">
+            <h4>진행 순서 · 4단계</h4>
+            <div class="steps-mini">
+              <div class="s"><span class="n">1</span>본인인증<span class="time">30초</span></div>
+              <div class="s"><span class="n">2</span>개인정보 입력<span class="time">1분 30초</span></div>
+              <div class="s"><span class="n">3</span>신분증 인증<span class="time">30초</span></div>
+              <div class="s"><span class="n">4</span>계좌 인증<span class="time">30초</span></div>
+            </div>
+          </div>
+          <div class="btn xl">지금 시작하기</div>
+          <div class="btn ghost">나중에 하기</div>
+        </div>
+      </div>
+      <p class="frame-cap"><b>1-1 체크리스트 인트로.</b> 사유(배너)→시간(헤드라인)→준비물(체크)→단계(카드)의 4층 구조. 준비물에 체크를 달아 "준비됐는지"를 스스로 확인하고 시작.</p>
+    </div>
+
+    <!-- 2-1 -->
+    <div class="frame-col">
+      <div class="phone">
+        <div class="topbar"><span class="ic">‹</span><span class="tt">고객확인 재이행</span><span class="ic">?</span></div>
+        <div class="body">
+          <div class="banner info">ⓘ&nbsp;법령에 따라 1년마다 다시 확인해요 · 6월 30일까지</div>
+          <div class="chips"><span class="chip">⏱ 약 3분</span><span class="chip">🪪 신분증 필요</span><span class="chip">🏦 본인 계좌 필요</span></div>
+          <div class="card"><div class="steps-mini">
+            <div class="s"><span class="n">1</span>본인인증</div></div></div>
+          <div class="card"><div class="steps-mini">
+            <div class="s"><span class="n">2</span>개인정보 입력</div></div></div>
+          <div class="card"><div class="steps-mini">
+            <div class="s"><span class="n">3</span>신분증 인증</div></div></div>
+          <div class="card"><div class="steps-mini">
+            <div class="s"><span class="n">4</span>계좌 인증</div></div></div>
+          <div class="btn xl">시작하기</div>
+          <div class="btn ghost">나중에 하기</div>
+        </div>
+      </div>
+      <p class="frame-cap"><b>2-1 현행 골격 보존.</b> AS-IS의 단계 카드 4개를 그대로 두고, 위에 사유 배너 1줄 + 메타 칩 3개(시간·준비물)만 추가. AS-IS 토글 시 배너·칩만 꺼지면 된다.</p>
+    </div>
+
+    <!-- 3-1 -->
+    <div class="frame-col">
+      <div class="phone">
+        <div class="topbar"><span class="ic">‹</span><span class="tt">고객확인 재이행</span><span class="ic">?</span></div>
+        <div class="body">
+          <div class="h-disp">6월 30일까지, 아직 여유 있어요</div>
+          <p class="h-sub">기한 전까지는 모든 기능을 그대로 쓸 수 있어요 · D-18</p>
+          <div class="card">
+            <div class="tl">
+              <div class="ev now"><div class="dot"></div><div class="when">오늘 ~ 6월 30일</div><div class="what">정상 이용 — 매매·입출금 모두 가능해요</div></div>
+              <div class="ev w1"><div class="dot"></div><div class="when">기한 5시간 전</div><div class="what">매매가 제한되고 미체결 주문이 취소돼요</div></div>
+              <div class="ev w1"><div class="dot"></div><div class="when">기한 1시간 전</div><div class="what">입출금이 제한돼요</div></div>
+              <div class="ev w2"><div class="dot"></div><div class="when">기한 경과</div><div class="what">완료 전까지 서비스 이용이 제한돼요</div></div>
+            </div>
+          </div>
+          <div class="chips"><span class="chip">⏱ 입력 약 3분</span><span class="chip">🪪 신분증</span><span class="chip">🏦 본인 계좌</span></div>
+          <div class="btn xl">지금 3분 만에 끝내기</div>
+          <div class="btn ghost">기한에 맞춰 알림 받기</div>
+        </div>
+      </div>
+      <p class="frame-cap"><b>3-1 기한 타임라인 히어로.</b> "여유 있어요"로 시작하는 돌봄 프레이밍 + 단계적 제한 4구간 수직 타임라인(선례 없는 영역). 준비물·시간은 칩으로 강등.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 화면 2: 나중에 하기 (R2) ===================== -->
+<section class="screen-row">
+  <h3>화면 2 — "나중에 하기" 이후 (R2)</h3>
+  <p class="sub">Bluesky는 누르면 그냥 닫히는 게 한계 — 거래소 A는 누른 "다음"이 핵심. 기한·제한을 어디서 얼마나 무겁게 보여줄지가 분기.</p>
+  <div class="frames">
+
+    <!-- 1-2 바텀시트 -->
+    <div class="frame-col">
+      <div class="phone">
+        <div class="topbar"><span class="ic">‹</span><span class="tt">고객확인 재이행</span><span class="ic">?</span></div>
+        <div class="body">
+          <div class="ph-block" style="height:120px">인트로 화면 (딤 처리)</div>
+          <div class="ph-block" style="height:200px"></div>
+          <div class="ph-block" style="height:120px"></div>
+        </div>
+        <div class="dim"><div class="sheet">
+          <div class="handle"></div>
+          <h4>6월 30일까지 완료해 주세요</h4>
+          <p class="desc">기한 전까지는 평소처럼 이용할 수 있어요. 기한이 다가오면 순서대로 제한돼요.</p>
+          <div class="act">⏸&nbsp;기한 5시간 전<span class="sub">매매 제한 · 미체결 취소</span></div>
+          <div class="act">⏸&nbsp;기한 1시간 전<span class="sub">입출금 제한</span></div>
+          <div class="act">⛔&nbsp;기한 경과<span class="sub">서비스 이용 제한</span></div>
+          <div class="btn lg2" style="margin-top:14px">알림 받고 홈으로 가기</div>
+        </div></div>
+      </div>
+      <p class="frame-cap"><b>1-2 기한 고지 바텀시트.</b> "나중에"를 누르는 순간 기한+단계적 제한을 한 번은 반드시 보게 한다. 이후 홈 상단에 D-day 배너 유지.</p>
+    </div>
+
+    <!-- 2-2 홈 배너 -->
+    <div class="frame-col">
+      <div class="phone">
+        <div class="topbar"><span class="tt" style="font-weight:700">거래소 A</span><span class="ic">🔔</span></div>
+        <div class="body">
+          <div class="home-strip"><span class="dday">D-18</span><div>고객확인을 6월 30일까지 완료해 주세요<div class="cap">기한이 다가오면 매매·입출금이 순서대로 제한돼요 — 자세히</div></div><span style="margin-left:auto;color:var(--disabled)">›</span></div>
+          <div class="ph-block" style="height:88px">자산 요약</div>
+          <div class="ph-block" style="height:48px">KRW · BTC · 관심</div>
+          <div class="ph-block" style="height:56px">시세 행</div>
+          <div class="ph-block" style="height:56px">시세 행</div>
+          <div class="ph-block" style="height:56px">시세 행</div>
+          <div class="ph-block" style="height:56px">시세 행</div>
+        </div>
+      </div>
+      <p class="frame-cap"><b>2-2 홈 접이식 기한 배너.</b> 별도 화면 없이 홈 상단 배너 한 줄 + 탭하면 제한 3줄 펼침. 가장 가볍지만, 펼치기 전엔 제한 내용이 안 보이는 트레이드오프.</p>
+    </div>
+
+    <!-- 3-2 알림 예약 -->
+    <div class="frame-col">
+      <div class="phone">
+        <div class="topbar"><span class="ic">‹</span><span class="tt">알림 예약</span><span class="ic">✕</span></div>
+        <div class="body">
+          <div class="inter-ic">🔔</div>
+          <div class="h-disp" style="text-align:center;font-size:20px">잊지 않게 알려드릴게요</div>
+          <p class="h-sub" style="text-align:center">기한(6월 30일) 전에 두 번 알림을 보내드려요</p>
+          <div class="card">
+            <div class="tl">
+              <div class="ev now"><div class="dot"></div><div class="when">6월 23일 (D-7)</div><div class="what">1차 알림 — "일주일 남았어요"</div></div>
+              <div class="ev w1"><div class="dot"></div><div class="when">6월 29일 (D-1)</div><div class="what">2차 알림 — "내일까지예요. 5시간 전부터 매매가 제한돼요"</div></div>
+            </div>
+          </div>
+          <p class="cap" style="margin-bottom:16px">알림과 별개로, 홈 상단에서 남은 기한을 항상 볼 수 있어요.</p>
+          <div class="btn xl">알림 받기</div>
+          <div class="btn ghost">알림 없이 홈으로</div>
+        </div>
+      </div>
+      <p class="frame-cap"><b>3-2 "나중에" = 알림 예약.</b> 미루기를 죄책감이 아니라 계획으로 재해석. 알림 시점 자체를 타임라인으로 보여줘 제한 예고를 한 번 더 학습시킨다.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 화면 3: 이메일 막힘 복구 (R4) ===================== -->
+<section class="screen-row">
+  <h3>화면 3 — 이메일 인증 막힘 복구 (R4 · P0 핵심 데모)</h3>
+  <p class="sub">막힘 시나리오 A. 공통 부품: 재발송 60초 쿨다운(Zora) · 스팸함 안내(Klarna) · 메일 앱 열기(Substack) · 주소 변경. 배치 방식이 분기.</p>
+  <div class="frames">
+
+    <!-- 1-3 인라인 -->
+    <div class="frame-col">
+      <div class="phone">
+        <div class="topbar"><span class="ic">‹</span><span class="tt">이메일 인증</span><span class="ic">?</span></div>
+        <div class="prog"><div class="segs"><span class="seg on"></span><span class="seg on"></span><span class="seg"></span><span class="seg"></span></div><div class="lab"><b>2/4 개인정보 입력</b> · 세부 1/4 이메일 · 남은 시간 약 2분</div></div>
+        <div class="body">
+          <div class="h-disp" style="font-size:20px">메일로 보낸 6자리 코드를 입력해 주세요</div>
+          <p class="h-sub">du***@gmail.com으로 보냈어요</p>
+          <div class="code6"><span class="d">4</span><span class="d">7</span><span class="d"></span><span class="d"></span><span class="d"></span><span class="d"></span></div>
+          <div class="btn lg2">메일 앱 열기</div>
+          <div class="btn ghost dis">재발송 (47초 후 가능)</div>
+          <p class="cap" style="margin:12px 0 16px">메일이 안 보이면 <b>스팸함</b>을 확인해 주세요. 주소가 바뀌었다면 <a class="link" href="#">이메일 주소 변경</a>으로 바로 바꿀 수 있어요.</p>
+        </div>
+      </div>
+      <p class="frame-cap"><b>1-3 인라인 복구.</b> 막힐 수 있는 경우의 수(안 옴·스팸·주소 틀림)마다 출구가 화면 안에 하나씩. 이동 없이 해결되지만 화면이 빽빽해진다.</p>
+    </div>
+
+    <!-- 2-3 바텀시트 -->
+    <div class="frame-col">
+      <div class="phone">
+        <div class="topbar"><span class="ic">‹</span><span class="tt">이메일 인증</span><span class="ic">?</span></div>
+        <div class="prog"><div class="segs"><span class="seg on"></span><span class="seg on"></span><span class="seg"></span><span class="seg"></span></div><div class="lab"><b>2/4 개인정보 입력</b> · 세부 1/4 이메일</div></div>
+        <div class="body" style="padding-bottom:0">
+          <div class="h-disp" style="font-size:20px">메일로 보낸 6자리 코드를 입력해 주세요</div>
+          <div class="code6" style="opacity:.45"><span class="d"></span><span class="d"></span><span class="d"></span><span class="d"></span><span class="d"></span><span class="d"></span></div>
+          <p style="text-align:center;margin-bottom:140px"><a class="link" href="#">메일이 안 왔나요?</a></p>
+        </div>
+        <div class="dim"><div class="sheet">
+          <div class="handle"></div>
+          <h4>메일이 안 왔나요?</h4>
+          <p class="desc">아래에서 바로 해결할 수 있어요.</p>
+          <div class="act">📬&nbsp;메일 앱 열기</div>
+          <div class="act">🔁&nbsp;코드 재발송<span class="sub">47초 후 가능</span></div>
+          <div class="act">🗑&nbsp;스팸함 확인하는 법</div>
+          <div class="act">✏️&nbsp;이메일 주소 변경</div>
+        </div></div>
+      </div>
+      <p class="frame-cap"><b>2-3 복구 바텀시트.</b> 입력 화면은 깨끗하게 유지하고 "메일이 안 왔나요?" 한 줄로 복구 4종을 시트에 모음. 시트를 닫으면 안내가 사라지는 단점.</p>
+    </div>
+
+    <!-- 3-3 인라인+기한 -->
+    <div class="frame-col">
+      <div class="phone">
+        <div class="topbar"><span class="ic">‹</span><span class="tt">이메일 인증</span><span class="ic">?</span></div>
+        <div class="prog"><div class="segs"><span class="seg on"></span><span class="seg on"></span><span class="seg"></span><span class="seg"></span></div><div class="lab"><b>2/4 개인정보 입력</b> · 세부 1/4 이메일 · 기한까지 D-18</div></div>
+        <div class="body">
+          <div class="banner info">ⓘ&nbsp;기한까지 18일 남았어요. 메일이 늦어도 괜찮아요.</div>
+          <div class="h-disp" style="font-size:20px">메일로 보낸 6자리 코드를 입력해 주세요</div>
+          <p class="h-sub">du***@gmail.com으로 보냈어요</p>
+          <div class="code6"><span class="d">4</span><span class="d">7</span><span class="d"></span><span class="d"></span><span class="d"></span><span class="d"></span></div>
+          <div class="btn lg2">메일 앱 열기</div>
+          <div class="btn ghost dis">재발송 (47초 후 가능)</div>
+          <p class="cap" style="margin-top:12px">스팸함도 확인해 보세요 · <a class="link" href="#">이메일 주소 변경</a></p>
+        </div>
+      </div>
+      <p class="frame-cap"><b>3-3 인라인 + 기한 안심 라인.</b> 복구 부품은 시안 1과 동일하되, 막힌 순간의 불안("이러다 기한 넘기나")을 기한 컨텍스트로 눌러준다 — Privacy의 '안심 카피 병치' 차용.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 화면 4: 외부 핸드오프 (R6) ===================== -->
+<section class="screen-row">
+  <h3>화면 4 — 외부 의존 단계 핸드오프 (R6)</h3>
+  <p class="sub">막힘 시나리오 C. "왜 앱 밖으로, 얼마나, 돌아오면 어디서" — 복귀 지점 약속은 모든 레퍼런스에 없어 신규 설계.</p>
+  <div class="frames">
+
+    <!-- 1-4 인터스티셜 -->
+    <div class="frame-col">
+      <div class="phone">
+        <div class="topbar"><span class="ic">‹</span><span class="tt">계좌 인증</span><span class="ic">?</span></div>
+        <div class="prog"><div class="segs"><span class="seg on"></span><span class="seg on"></span><span class="seg on"></span><span class="seg on"></span></div><div class="lab"><b>4/4 계좌 인증</b> · 마지막 단계</div></div>
+        <div class="body">
+          <div class="inter-ic">🏦</div>
+          <div class="h-disp" style="font-size:20px;text-align:center">잠시 은행 앱에서<br>1원 입금을 확인해요</div>
+          <div class="qa" style="margin-top:16px">
+            <div class="q"><span class="i">❓</span><div><b>왜 은행 앱으로 가나요?</b><br><span class="cap">원화 거래용 계좌 확인은 법적 요건이에요.</span></div></div>
+            <div class="q"><span class="i">🔒</span><div><b>안전한가요?</b><br><span class="cap">확인용 1원을 입금만 해요. 출금 권한은 없어요.</span></div></div>
+            <div class="q"><span class="i">⏱</span><div><b>얼마나 걸리나요?</b><br><span class="cap">보통 1분 이내예요.</span></div></div>
+            <div class="q"><span class="i">↩️</span><div><b>돌아오면요?</b><br><span class="cap">지금 이 단계(4/4)에서 그대로 이어져요.</span></div></div>
+          </div>
+          <div class="btn xl">은행 앱 열기</div>
+        </div>
+      </div>
+      <p class="frame-cap"><b>1-4 풀스크린 인터스티셜.</b> 이동 전에 이유·권한 범위·소요·복귀 지점 4문답(Coinbase Plaid + Copilot 권한 명시). 맥락은 충분하나 단계가 +1.</p>
+    </div>
+
+    <!-- 2-4 인라인 노트 -->
+    <div class="frame-col">
+      <div class="phone">
+        <div class="topbar"><span class="ic">‹</span><span class="tt">계좌 인증</span><span class="ic">?</span></div>
+        <div class="prog"><div class="segs"><span class="seg on"></span><span class="seg on"></span><span class="seg on"></span><span class="seg on"></span></div><div class="lab"><b>4/4 계좌 인증</b> · 마지막 단계</div></div>
+        <div class="body">
+          <div class="h-disp" style="font-size:20px">본인 명의 계좌를 등록해 주세요</div>
+          <p class="h-sub">계좌로 1원을 보내 본인 계좌인지 확인해요</p>
+          <div class="input">은행 선택</div>
+          <div class="input">계좌번호 입력</div>
+          <div class="banner info" style="margin-top:8px">ⓘ&nbsp;1원 확인은 <b>은행 앱</b>에서 진행돼요 · 보통 1분 · 돌아오면 이 화면에서 이어져요</div>
+          <p class="cap" style="margin-bottom:16px">계좌가 없다면 개설에 은행 심사 기간이 걸릴 수 있어요. 그동안 코인 마켓은 그대로 이용할 수 있어요.</p>
+          <div class="btn xl">1원 보내기</div>
+        </div>
+      </div>
+      <p class="frame-cap"><b>2-4 인라인 노트.</b> 별도 화면 없이 입력 화면 하단 노트로 소요·복귀만 고지(Mercury). 가볍지만 외부 의존(은행 앱·계좌 개설)의 무게 대비 빈약할 수 있음.</p>
+    </div>
+
+    <!-- 3-4 인터스티셜+기한 환산 -->
+    <div class="frame-col">
+      <div class="phone">
+        <div class="topbar"><span class="ic">‹</span><span class="tt">계좌 인증</span><span class="ic">?</span></div>
+        <div class="prog"><div class="segs"><span class="seg on"></span><span class="seg on"></span><span class="seg on"></span><span class="seg on"></span></div><div class="lab"><b>4/4 계좌 인증</b> · 기한까지 D-18</div></div>
+        <div class="body">
+          <div class="inter-ic">🏦</div>
+          <div class="h-disp" style="font-size:20px;text-align:center">은행 앱에서 1원 입금을<br>확인하고 올게요</div>
+          <div class="card" style="margin-top:16px">
+            <div class="tl">
+              <div class="ev now"><div class="dot"></div><div class="when">계좌가 있다면</div><div class="what">보통 1분 — 지금 바로 끝낼 수 있어요</div></div>
+              <div class="ev w1"><div class="dot"></div><div class="when">계좌 개설이 필요하다면</div><div class="what">은행 심사에 며칠 걸릴 수 있어요. 기한(6월 30일)까지 18일 — 아직 여유 있어요. 그동안 코인 마켓은 그대로 이용돼요.</div></div>
+            </div>
+          </div>
+          <p class="cap" style="margin-bottom:16px">확인용 1원 입금만 하며, 출금 권한은 없어요. 돌아오면 이 단계(4/4)에서 이어져요.</p>
+          <div class="btn xl">은행 앱 열기</div>
+        </div>
+      </div>
+      <p class="frame-cap"><b>3-4 기한 환산 인터스티셜.</b> 외부 소요("며칠")를 남은 기한("18일")과 나란히 — "20일 기다려야 하는데" 불안을 숫자 대 숫자로 해소. 시안 3의 기한 문법을 핸드오프까지 일관 적용.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== 화면 5: 제출 전 검토 (R13) ===================== -->
+<section class="screen-row">
+  <h3>화면 5 — 제출 전 검토 (R13)</h3>
+  <p class="sub">막힘 시나리오 D. 오입력→검수 반려→전체 재이행 루프를 제출 전에 차단. Baymard: 검토에서 역행시키는 68%가 문제적, 11.6%는 검토를 완료로 오인 — 제출 버튼을 명확히 미완료 상태로.</p>
+  <div class="frames">
+
+    <!-- 1-5 행 편집 -->
+    <div class="frame-col">
+      <div class="phone">
+        <div class="topbar"><span class="ic">‹</span><span class="tt">제출 전 확인</span><span class="ic">?</span></div>
+        <div class="body">
+          <div class="h-disp" style="font-size:20px">제출 전에 확인해 주세요</div>
+          <p class="h-sub">제출 후에는 검수가 시작돼 바로 수정하기 어려워요</p>
+          <div class="card" style="padding:4px 16px">
+            <div class="rowlist">
+              <div class="r"><span class="k">이름</span><span class="v">김두나</span><span class="edit">수정</span></div>
+              <div class="r"><span class="k">영문 이름</span><span class="v">KIM DUNA</span><span class="badge-w">반려 빈발</span><span class="edit">수정</span></div>
+              <div class="r"><span class="k">주소</span><span class="v">서울 강남구 테헤란로 …</span><span class="badge-w">반려 빈발</span><span class="edit">수정</span></div>
+              <div class="r"><span class="k">직업</span><span class="v">회사원 · IT</span><span class="edit">수정</span></div>
+              <div class="r"><span class="k">직장명</span><span class="v">두나기획</span><span class="badge-w">반려 빈발</span><span class="edit">수정</span></div>
+              <div class="r"><span class="k">거래 목적</span><span class="v">투자</span><span class="edit">수정</span></div>
+              <div class="r"><span class="k">계좌</span><span class="v">○○은행 110-***-***890</span><span class="edit">수정</span></div>
+            </div>
+          </div>
+          <p class="cap" style="margin-bottom:12px">⚠️ 표시 항목은 검수 반려가 잦아요. 여권·등본과 글자까지 같은지 확인해 주세요.</p>
+          <div class="btn xl">이대로 제출하기</div>
+        </div>
+      </div>
+      <p class="frame-cap"><b>1-5 행 단위 편집 검토.</b> 모든 항목에 행별 "수정" 직진입(Capital One) + 빈발 항목 경고 칩. R13 요구를 직격하지만 화면이 길어진다.</p>
+    </div>
+
+    <!-- 2-5 아코디언 -->
+    <div class="frame-col">
+      <div class="phone">
+        <div class="topbar"><span class="ic">‹</span><span class="tt">제출 전 확인</span><span class="ic">?</span></div>
+        <div class="body">
+          <div class="h-disp" style="font-size:20px">단계별로 확인해 주세요</div>
+          <p class="h-sub">⚠️ 표시 단계를 먼저 펼쳐 확인하는 걸 추천해요</p>
+          <div class="acc">
+            <div class="sec"><div class="hd">1 본인인증<span class="st">확인 완료</span>&nbsp;<span class="ar">▾</span></div></div>
+            <div class="sec">
+              <div class="hd">2 개인정보<span class="st w">⚠️ 확인 필요</span>&nbsp;<span class="ar">▴</span></div>
+              <div class="bd"><div class="rowlist">
+                <div class="r"><span class="k">영문 이름</span><span class="v">KIM DUNA</span><span class="badge-w">반려 빈발</span><span class="edit">수정</span></div>
+                <div class="r"><span class="k">주소</span><span class="v">서울 강남구 …</span><span class="edit">수정</span></div>
+              </div></div>
+            </div>
+            <div class="sec"><div class="hd">3 필수 정보<span class="st w">⚠️ 확인 필요</span>&nbsp;<span class="ar">▾</span></div></div>
+            <div class="sec"><div class="hd">4 신분증<span class="st">확인 완료</span>&nbsp;<span class="ar">▾</span></div></div>
+            <div class="sec"><div class="hd">5 계좌<span class="st">확인 완료</span>&nbsp;<span class="ar">▾</span></div></div>
+          </div>
+          <div class="btn xl dis" style="margin-top:12px">제출하기 (확인 필요 2)</div>
+        </div>
+      </div>
+      <p class="frame-cap"><b>2-5 섹션 아코디언 검토.</b> 입력량이 많은 6단계에 강함 — STEP별로 접고, 빈발 항목 포함 섹션은 ⚠️로 표면화 + 기본 펼침. 펼치기 전엔 세부 오류가 안 보이는 트레이드오프를 ⚠️ 요약으로 보완.</p>
+    </div>
+
+    <!-- 3-5 행 편집+기한 -->
+    <div class="frame-col">
+      <div class="phone">
+        <div class="topbar"><span class="ic">‹</span><span class="tt">제출 전 확인</span><span class="ic">?</span></div>
+        <div class="body">
+          <div class="banner warn">⚠️&nbsp;반려되면 다시 제출해야 해요. 기한(6월 30일) 전에 여유 있게, 지금 1분만 확인해 주세요.</div>
+          <div class="h-disp" style="font-size:20px">제출 전에 확인해 주세요</div>
+          <div class="card" style="padding:4px 16px;margin-top:12px">
+            <div class="rowlist">
+              <div class="r"><span class="k">영문 이름</span><span class="v">KIM DUNA</span><span class="badge-w">반려 빈발</span><span class="edit">수정</span></div>
+              <div class="r"><span class="k">주소</span><span class="v">서울 강남구 테헤란로 …</span><span class="badge-w">반려 빈발</span><span class="edit">수정</span></div>
+              <div class="r"><span class="k">직장명</span><span class="v">두나기획</span><span class="badge-w">반려 빈발</span><span class="edit">수정</span></div>
+              <div class="r"><span class="k">이름</span><span class="v">김두나</span><span class="edit">수정</span></div>
+              <div class="r"><span class="k">직업</span><span class="v">회사원 · IT</span><span class="edit">수정</span></div>
+              <div class="r"><span class="k">거래 목적</span><span class="v">투자</span><span class="edit">수정</span></div>
+              <div class="r"><span class="k">계좌</span><span class="v">○○은행 110-***-***890</span><span class="edit">수정</span></div>
+            </div>
+          </div>
+          <div class="btn xl">이대로 제출하기</div>
+        </div>
+      </div>
+      <p class="frame-cap"><b>3-5 행 편집 + 반려 비용의 기한 환산.</b> 골격은 시안 1과 같되 ①빈발 3항목을 리스트 최상단으로 끌어올리고 ②"반려 = 기한 내 재제출"이라는 비용을 배너로 선명히. 공포 소구 경계선 — Voice 검수 필요.</p>
+    </div>
+  </div>
+</section>
+
+<footer class="note">
+  <b>공통(분기 없음)</b>: 진행 표시 R3 = A안(4분모 + 개인정보 세부 병행, 전 시안 적용 확인) · 완료 화면 R7 = Coinbase식 알림 약속 + Amazon식 동기 구간 시간 상한 — 레퍼런스 보드 권고대로 공통 적용 권장. AS-IS 모드(R9)는 어느 시안이든 안내 요소(배너·칩·타임라인·복구 경로) 토글로 구현.<br>
+  <b>다음 단계</b>: 시안 선택(또는 교배 — 예: 2-1 진입 + 1-3 복구 + 3-2 알림 예약) → working-prototype 스킬로 인터랙티브 프로토타입 제작.<br>
+  익명화: 본 문서의 서비스명은 '거래소 A'. 수치·정책(5h/1h 제한, 기한 등)은 PRD v3 기준.
+</footer>
+
+</div>
+</body>
+</html>

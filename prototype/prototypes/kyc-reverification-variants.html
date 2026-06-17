@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>거래소 A 고객확인 재이행 — 와이어프레임 3종 비교 보드</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:Inter,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif; background:#f4f4f5; color:#09090b; line-height:1.5; }
+  .wrap { max-width:1360px; margin:0 auto; padding:48px 28px 96px; }
+  h1 { font-size:26px; font-weight:800; letter-spacing:-0.4px; }
+  .meta { color:#71717a; font-size:13px; margin:8px 0 32px; }
+  h2.sec { font-size:19px; font-weight:800; margin:56px 0 6px; border-left:4px solid #4338ca; padding-left:12px; }
+  .sec-sub { font-size:13px; color:#71717a; margin-bottom:18px; padding-left:16px; }
+
+  /* 가설 카드 */
+  .hypo { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+  .hcard { background:#fff; border-radius:16px; padding:20px; border:1px solid #e4e4e7; }
+  .htag { display:inline-block; font-size:12px; font-weight:700; padding:3px 12px; border-radius:999px; margin-bottom:10px; }
+  .tA { background:#eef2ff; color:#4338ca; } .tB { background:#f4f4f5; color:#18181b; } .tC { background:#fffbeb; color:#b45309; }
+  .hname { font-size:16px; font-weight:800; margin-bottom:8px; }
+  .hcard p { font-size:13px; color:#3f3f46; margin-bottom:7px; }
+  .hcard b.k { color:#09090b; }
+
+  /* 매트릭스 */
+  table.mx { width:100%; border-collapse:collapse; background:#fff; border-radius:14px; overflow:hidden; font-size:12.5px; }
+  .mx th, .mx td { border:1px solid #e4e4e7; padding:9px 12px; text-align:left; vertical-align:top; }
+  .mx th { background:#fafafa; font-weight:700; }
+  .mx td.rowh { background:#fafafa; font-weight:600; width:130px; }
+
+  /* 화면 비교 행 */
+  .screens { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; align-items:start; }
+  .cell { display:flex; flex-direction:column; gap:10px; }
+  .cap { font-size:12px; color:#3f3f46; background:#fff; border:1px solid #e4e4e7; border-radius:10px; padding:10px 12px; }
+  .cap b { font-size:12px; } .cap .ref { color:#4338ca; } .cap .toff { color:#b45309; }
+
+  /* ===== 375 프레임 (디자인시스템 토큰) ===== */
+  .f { width:375px; max-width:100%; margin:0 auto; background:#ffffff; border:1px solid #e4e4e7; border-radius:18px; overflow:hidden; font-size:16px; }
+  .tb { height:56px; display:flex; align-items:center; justify-content:space-between; padding:0 16px; border-bottom:1px solid #f4f4f5; }
+  .tb .ti { font-size:18px; font-weight:600; } .tb .x { color:#71717a; font-size:20px; width:40px; text-align:right; }
+  .tb .bk { color:#71717a; font-size:20px; width:40px; }
+  .body { padding:16px; }
+  /* 진행 표시 (R3 A안 — 전 시안 공통, 픽셀 동일) */
+  .prog { padding:10px 16px 0; }
+  .prog .pl { font-size:12px; color:#71717a; display:flex; justify-content:space-between; margin-bottom:6px; }
+  .prog .pl b { color:#09090b; font-weight:600; }
+  .pbar { display:flex; gap:4px; } .pbar i { height:4px; flex:1; border-radius:2px; background:#e4e4e7; } .pbar i.on { background:#4338ca; }
+  .sub { font-size:11px; color:#a1a1aa; margin-top:4px; }
+  h3.sct { font-size:24px; font-weight:700; line-height:1.3; margin:8px 0 6px; }
+  .lead { font-size:14px; color:#71717a; margin-bottom:14px; }
+  .cta { height:56px; border-radius:16px; background:#4338ca; color:#eef2ff; font-weight:600; font-size:16px; display:flex; align-items:center; justify-content:center; margin-top:14px; }
+  .gbtn { height:48px; border-radius:16px; color:#09090b; font-weight:600; font-size:15px; display:flex; align-items:center; justify-content:center; }
+  .sbtn { height:48px; border-radius:16px; background:#f4f4f5; color:#18181b; font-weight:600; font-size:15px; display:flex; align-items:center; justify-content:center; }
+  .card { background:#fff; border-radius:24px; box-shadow:0 0 0 1px rgb(9 9 11 / 0.05), 0 1px 2px rgb(0 0 0 / 0.05); padding:16px; margin-bottom:12px; }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin:10px 0; }
+  .chip { font-size:12px; font-weight:600; background:#f4f4f5; color:#18181b; border-radius:999px; padding:5px 12px; }
+  .chip.ok { background:rgb(22 163 74 / 0.1); color:#16a34a; }
+  .chip.warn { background:rgb(217 119 6 / 0.1); color:#d97706; }
+  .banner { background:#eef2ff; border-radius:12px; padding:12px 14px; font-size:13px; color:#3730a3; margin-bottom:12px; }
+  .banner-warn { background:rgb(217 119 6 / 0.08); border-radius:12px; padding:12px 14px; font-size:13px; color:#92400e; margin-bottom:12px; }
+  .li { display:flex; align-items:center; min-height:48px; border-bottom:1px solid #f4f4f5; gap:12px; font-size:15px; }
+  .li:last-child { border-bottom:0; }
+  .li .ic { width:24px; height:24px; border-radius:6px; background:#eef2ff; flex:0 0 24px; }
+  .li .gr { color:#a1a1aa; margin-left:auto; font-size:13px; }
+  .ck { width:20px; height:20px; border-radius:6px; background:#4338ca; color:#fff; font-size:13px; display:flex; align-items:center; justify-content:center; flex:0 0 20px; }
+  .ck.off { background:rgb(228 228 231 / 0.9); color:transparent; }
+  .inp { height:48px; border-radius:16px; background:rgb(228 228 231 / 0.5); display:flex; align-items:center; padding:0 14px; color:#a1a1aa; font-size:16px; margin-bottom:10px; }
+  .inp.err { background:#fff; border:1px solid #dc2626; box-shadow:0 0 0 3px rgb(220 38 38 / 0.2); color:#09090b; }
+  .help-err { font-size:13px; color:#dc2626; margin:-2px 0 10px 4px; }
+  .help { font-size:13px; color:#71717a; margin:0 0 10px 4px; }
+  .dday { font-size:32px; font-weight:700; line-height:1.25; }
+  /* 타임라인 */
+  .tl { margin:14px 0; }
+  .tl .tr { display:flex; gap:12px; }
+  .tl .dot { width:12px; height:12px; border-radius:50%; background:#e4e4e7; margin-top:4px; flex:0 0 12px; }
+  .tl .dot.now { background:#16a34a; box-shadow:0 0 0 4px rgb(22 163 74 / 0.15); }
+  .tl .dot.w { background:#d97706; } .tl .dot.e { background:#dc2626; }
+  .tl .ln { width:2px; flex:1; background:#e4e4e7; margin:2px 0 2px 5px; min-height:18px; }
+  .tl .tx { padding-bottom:14px; }
+  .tl .tt { font-size:14px; font-weight:600; } .tl .td { font-size:12px; color:#71717a; }
+  /* 바텀시트 */
+  .sheetwrap { position:relative; }
+  .dim { position:absolute; inset:0; background:rgb(0 0 0 / 0.4); border-radius:0 0 17px 17px; }
+  .sheet { position:relative; background:#fff; border-radius:24px 24px 0 0; padding:8px 16px 16px; box-shadow:0 4px 12px rgb(0 0 0 / 0.08); }
+  .hdl { width:36px; height:4px; border-radius:2px; background:#e4e4e7; margin:4px auto 12px; }
+  .shtt { font-size:18px; font-weight:600; margin-bottom:4px; }
+  /* 카메라 */
+  .cam { background:#18181b; border-radius:14px; padding:18px 14px; color:#fafafa; margin-bottom:12px; }
+  .camfrm { border:2px solid #d97706; border-radius:10px; height:120px; display:flex; align-items:center; justify-content:center; color:#a1a1aa; font-size:13px; margin:10px 0; }
+  /* 홈 mock */
+  .price { display:flex; justify-content:space-between; align-items:center; min-height:48px; border-bottom:1px solid #f4f4f5; font-size:14px; }
+  .price .nm { font-weight:600; } .price .sym { color:#71717a; font-size:12px; }
+  .up { color:#d93b43; font-variant-numeric:tabular-nums; } .num { font-variant-numeric:tabular-nums; font-weight:600; }
+  footer.note { margin-top:64px; background:#fff; border:1px solid #e4e4e7; border-radius:16px; padding:24px 28px; font-size:13px; color:#3f3f46; }
+  footer.note h3 { font-size:15px; margin-bottom:8px; } footer.note li { margin:4px 0 0 18px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>거래소 A 고객확인 재이행 — 와이어프레임 3종 비교 보드</h1>
+<p class="meta">입력: exchange-a-kyc-reverification-prd.md (v3) · kyc-reverification-references/references.md §와이어프레임 핸드오프 · design-system-exchange-a.md (라이트) — 375px 프레임 · 시안 3종 × 분기 화면 5장 · 공통: R3 진행표시 A안(4분모+세부), 완료 화면(Coinbase식 알림 약속+CARF 예고), Voice(해요체·원인+다음 행동·공포 소구 금지), 익명화('거래소 A')</p>
+
+<!-- ═══════ 가설 카드 ═══════ -->
+<h2 class="sec">가설 카드 — 무엇을 믿고 가르는가</h2>
+<p class="sec-sub">축 1 · 문제 진단: 같은 "막힘" 불만의 원인을 다르게 본다 — 준비 부재 / 안내 부재 / 예측 불가 · 축 2 · 개입 강도: B(보존) &lt; A(중간) &lt; C(재설계)</p>
+<div class="hypo">
+  <div class="hcard">
+    <span class="htag tA">시안 A</span>
+    <div class="hname">준비 체크리스트형</div>
+    <p><b class="k">가설</b> — 사용자는 준비물 없이 시작했다가 중간에 막힌다. 시작 전에 준비시키면 완주한다.</p>
+    <p><b class="k">우선 타겟</b> — 상황 B(오랜만에 복귀, 구조가 낯선 사용자).</p>
+    <p><b class="k">이기는 이유</b> — "미리미리 말해라" 리뷰에 정면 대응. 빗썸·코인원에 준비물 화면 선례가 있어 학습 비용 낮음.</p>
+    <p><b class="k">리스크</b> — 거래 중에 급히 들어온 상황 A 사용자에겐 인트로가 한 단계 마찰.</p>
+    <p><b class="k">검증할 것</b> — 체크리스트를 읽고 시작하면 STEP 4·5(신분증·계좌) 이탈이 실제로 주는가?</p>
+  </div>
+  <div class="hcard">
+    <span class="htag tB">시안 B</span>
+    <div class="hname">현행 골격 + 안내 레이어형</div>
+    <p><b class="k">가설</b> — 현행 4단계 구조는 문제없다. 각 막힘 지점에 안내가 없을 뿐이다. 골격을 보존하고 안내만 얹으면 충분하다.</p>
+    <p><b class="k">우선 타겟</b> — 기존 사용자(멘탈모델 유지) + 구현·설득 비용 최소화.</p>
+    <p><b class="k">이기는 이유</b> — "구조는 그대로, 안내만 더했다" — AS-IS/TO-BE 대비(R9)가 가장 깔끔하고 발표 스토리가 안전.</p>
+    <p><b class="k">리스크</b> — 임팩트가 작아 보임. 막힘의 구조적 원인(예측 불가)은 풀지 못함.</p>
+    <p><b class="k">검증할 것</b> — 시트형 안내(닫으면 사라짐)로도 막힘 해소가 충분한가?</p>
+  </div>
+  <div class="hcard">
+    <span class="htag tC">시안 C</span>
+    <div class="hname">기한 타임라인형</div>
+    <p><b class="k">가설</b> — 미루다 차단당하는 진짜 원인은 "언제까지 안 하면 무엇이 막히는지" 예측 불가다. 기한을 1급 정보로 올리면 미룸도 분노도 준다.</p>
+    <p><b class="k">우선 타겟</b> — 상황 A(거래 중 도래, "지금 vs 나중" 선택이 급한 사용자).</p>
+    <p><b class="k">이기는 이유</b> — 레퍼런스 공백 영역(선례 없음) — 유일하게 "우리가 새로 풀었다"고 말할 수 있는 시안. 토스의 돌봄 톤 + 빗썸 공식 5h/1h 정책을 화면화.</p>
+    <p><b class="k">리스크</b> — 공포 소구 경계선(코인원 "반 협박" 반면교사). 카피와 색을 디자인으로 눌러야 함.</p>
+    <p><b class="k">검증할 것</b> — 타임라인을 본 사용자가 "나중에 하기"를 골라도 기한 내 복귀하는가?</p>
+  </div>
+</div>
+
+<!-- ═══════ 분기 매트릭스 ═══════ -->
+<h2 class="sec">분기 매트릭스</h2>
+<p class="sec-sub">행 = 분기 지점 · 열 = 시안. 확정 사항(진행 표시 A안·완료 화면·Voice)은 행에 없음 — 전 시안 공통.</p>
+<table class="mx">
+  <tr><th></th><th>A · 준비 체크리스트형</th><th>B · 현행 골격+안내 레이어형</th><th>C · 기한 타임라인형</th></tr>
+  <tr><td class="rowh">① 진입 (R1·R2)</td><td>풀스크린 준비물 체크리스트 + 소요시간 헤드라인 (Sleeper+빗썸)</td><td>AS-IS 단계 카드 4개 보존 + 사유 배너·정보 칩 (Prodigy)</td><td>D-day 히어로 + 단계적 제한 타임라인 (선례 없음 — 신규 설계, 톤은 토스)</td></tr>
+  <tr><td class="rowh">② 나중에 하기 (R2)</td><td>준비물 리마인드 저장 시트</td><td>홈 상단 D-day 배너 (콤팩트)</td><td>타임라인 풀스크린 + 리마인드 약속</td></tr>
+  <tr><td class="rowh">③ 이메일 막힘 (R4)</td><td>인라인 복구 3종 + 메일 앱 버튼 (Klarna+Substack)</td><td>본 화면 보존 + 복구 바텀시트</td><td>인라인 복구 + "기한 여유" 맥락 한 줄</td></tr>
+  <tr><td class="rowh">④ 신분증 실패 (R5)</td><td>원인+교정+잔여 횟수 인라인 (DoorDash식)</td><td>촬영 화면 위 원인 분류 시트 (공식 5분류 리스트)</td><td>인라인 + 소진 시 다음 행동 예고 (코인원 잠김 반면교사)</td></tr>
+  <tr><td class="rowh">⑤ 제출 전 검토 (R13)</td><td>행 단위 편집 + 빈발 항목 경고 칩 (Capital One)</td><td>STEP별 아코디언 + 섹션 수정</td><td>행 단위 편집 + 기한 안심 카피</td></tr>
+  <tr><td class="rowh">카피 톤의 중심</td><td>"준비됐어요?" — 채비</td><td>"여기서 이렇게 하세요" — 길잡이</td><td>"아직 여유 있어요" — 예보</td></tr>
+</table>
+
+<!-- ═══════ 화면 1: 진입 ═══════ -->
+<h2 class="sec">화면 ① 진입 — 시작 전 안내 (최대 분기 지점)</h2>
+<p class="sec-sub">레퍼런스 공백(R2 타임라인) 1순위 분기. 사유·시작 버튼은 3안 공통, 정보의 1순위가 다르다: A=준비물 / B=현행 구조 / C=기한.</p>
+<div class="screens">
+
+  <div class="cell">
+    <div class="f">
+      <div class="tb"><span class="ti">고객확인 재등록</span><span class="x">✕</span></div>
+      <div class="body">
+        <h3 class="sct">시작 전에<br>두 가지만 준비해 주세요</h3>
+        <p class="lead">입력은 약 3분이면 끝나요. 검수는 제출 후 따로 진행돼요.</p>
+        <div class="card">
+          <div class="li"><span class="ck">✓</span> 신분증 <span class="gr">주민등록증·운전면허증·모바일 신분증</span></div>
+          <div class="li"><span class="ck off">✓</span> 본인 명의 은행 계좌 <span class="gr">1원 입금 확인용</span></div>
+        </div>
+        <div class="banner">특정금융정보법에 따라 1년마다 고객 정보를 다시 확인하고 있어요.</div>
+        <div class="cta">준비됐어요, 시작하기</div>
+        <div class="gbtn">나중에 하기</div>
+      </div>
+    </div>
+    <div class="cap"><b>A-진입</b> · 준비물 체크리스트가 화면의 주인공 — 체크 인터랙션으로 "준비됨"을 만들고 시작시킨다.<br><span class="ref">차용: Sleeper(시간 헤드라인)+빗썸 준비물 화면+Prodigy(사유 배너)</span><br><span class="toff">트레이드오프: 급한 사용자에겐 읽을 게 많다.</span></div>
+  </div>
+
+  <div class="cell">
+    <div class="f">
+      <div class="tb"><span class="ti">고객확인 재등록</span><span class="x">✕</span></div>
+      <div class="body">
+        <div class="banner">특정금융정보법에 따라 1년마다 정보를 확인하고 있어요. 절차는 기존과 같아요.</div>
+        <div class="chips"><span class="chip">약 3분</span><span class="chip">신분증 필요</span><span class="chip">본인 계좌 필요</span></div>
+        <div class="card"><div class="li"><span class="ic"></span> 1. 휴대폰 본인인증 <span class="gr">1분</span></div>
+        <div class="li"><span class="ic"></span> 2. 개인정보 입력 <span class="gr">1분</span></div>
+        <div class="li"><span class="ic"></span> 3. 신분증 인증 <span class="gr">30초</span></div>
+        <div class="li"><span class="ic"></span> 4. 계좌 인증 <span class="gr">30초</span></div></div>
+        <div class="cta">지금 시작하기</div>
+        <div class="gbtn">나중에 하기</div>
+      </div>
+    </div>
+    <div class="cap"><b>B-진입</b> · 현행 단계 카드 4개를 그대로 두고 사유 배너+정보 칩+단계별 시간만 얹음 — "구조는 그대로, 안내만 더했다".<br><span class="ref">차용: AS-IS 골격+Prodigy(사유)+Coinbase(단계별 예상 시간)</span><br><span class="toff">트레이드오프: 변화 임팩트가 작아 보인다.</span></div>
+  </div>
+
+  <div class="cell">
+    <div class="f">
+      <div class="tb"><span class="ti">고객확인 재등록</span><span class="x">✕</span></div>
+      <div class="body">
+        <p class="lead" style="margin-bottom:4px">6월 27일까지 확인이 필요해요</p>
+        <div class="dday">D-14</div>
+        <p class="lead">늦어도 거래가 바로 막히지 않아요. 단계별로 미리 알려드려요.</p>
+        <div class="tl">
+          <div class="tr"><span class="dot now"></span><div class="tx"><div class="tt">지금 — 모든 기능 정상 이용</div></div></div>
+          <div class="tr"><span class="dot w"></span><div class="tx"><div class="tt">기한 5시간 전 — 매매 제한</div><div class="td">미체결 주문도 취소돼요</div></div></div>
+          <div class="tr"><span class="dot w"></span><div class="tx"><div class="tt">기한 1시간 전 — 입출금 제한</div></div></div>
+          <div class="tr"><span class="dot e"></span><div class="tx"><div class="tt">기한 이후 — 서비스 제한</div><div class="td">확인을 마치면 바로 풀려요</div></div></div>
+        </div>
+        <div class="cta">3분만에 끝내기</div>
+        <div class="gbtn">나중에 하기</div>
+      </div>
+    </div>
+    <div class="cap"><b>C-진입</b> · D-day와 단계적 제한 타임라인이 히어로 — "언제까지 뭘 안 하면 뭐가 막히나"에 화면이 먼저 답한다.<br><span class="ref">차용: 선례 없음(신규 설계) · 정책=빗썸 공식 5h/1h · 톤=토스 "1분만에"·돌봄 프레이밍</span><br><span class="toff">트레이드오프: 빨간 점 하나만 잘못 키워도 공포 소구가 된다.</span></div>
+  </div>
+</div>
+
+<!-- ═══════ 화면 2: 나중에 하기 ═══════ -->
+<h2 class="sec">화면 ② "나중에 하기" 직후 (R2)</h2>
+<p class="sec-sub">유예를 고른 사용자에게 무엇을 남기는가 — A=준비물 기억 / B=홈의 잔상 / C=기한 지도.</p>
+<div class="screens">
+
+  <div class="cell">
+    <div class="f">
+      <div class="tb"><span class="ti">고객확인 재등록</span><span class="x">✕</span></div>
+      <div class="sheetwrap"><div style="height:150px"></div><div class="dim"></div>
+        <div class="sheet">
+          <div class="hdl"></div>
+          <div class="shtt">준비되면 다시 만나요</div>
+          <p class="lead">다음에 올 때 이것만 챙겨 주세요.</p>
+          <div class="chips"><span class="chip">신분증</span><span class="chip">본인 명의 계좌</span></div>
+          <p class="help">6월 27일까지 완료해 주세요. 3일 전에 다시 알려드릴게요.</p>
+          <div class="cta" style="margin-top:8px">홈으로 가기</div>
+        </div>
+      </div>
+    </div>
+    <div class="cap"><b>A-유예</b> · 떠나는 순간에도 준비물을 한 번 더 — "다음 방문을 준비시키는" 시트.<br><span class="ref">차용: Bluesky(선택권)+빗썸 준비물</span><br><span class="toff">트레이드오프: 기한 정보가 한 줄뿐 — 미룸 자체는 못 막는다.</span></div>
+  </div>
+
+  <div class="cell">
+    <div class="f">
+      <div class="tb"><span class="ti" style="font-weight:700">거래소 A</span><span class="x">🔔</span></div>
+      <div class="body" style="padding-top:12px">
+        <div class="banner-warn" style="display:flex;align-items:center;gap:10px"><span style="flex:1">고객확인 재등록 D-14 · 약 3분</span><span class="chip" style="background:#4338ca;color:#eef2ff">지금 하기</span></div>
+        <div class="price"><span><span class="nm">비트코인</span> <span class="sym">BTC/KRW</span></span><span class="num">52,341,000</span><span class="up">+2.41%</span></div>
+        <div class="price"><span><span class="nm">이더리움</span> <span class="sym">ETH/KRW</span></span><span class="num">3,182,000</span><span class="up">+0.87%</span></div>
+        <div class="price"><span><span class="nm">리플</span> <span class="sym">XRP/KRW</span></span><span class="num">1,015</span><span class="up">+1.12%</span></div>
+        <div style="height:64px"></div>
+      </div>
+    </div>
+    <div class="cap"><b>B-유예</b> · 별도 화면 없이 홈 상단 배너로 잔존 — 사용자의 원래 과업(시세 확인)을 막지 않는다.<br><span class="ref">차용: 현행 "제한됐어요" 배너의 사전 예고 버전</span><br><span class="toff">트레이드오프: 배너 실명(배너 블라인드) 위험 — D-3 안에 못 보면 끝.</span></div>
+  </div>
+
+  <div class="cell">
+    <div class="f">
+      <div class="tb"><span class="bk">‹</span><span class="ti">기한 안내</span><span class="x">✕</span></div>
+      <div class="body">
+        <h3 class="sct">알겠어요,<br>6월 27일까지 기다릴게요</h3>
+        <div class="tl">
+          <div class="tr"><span class="dot now"></span><div class="tx"><div class="tt">오늘 (D-14) — 정상 이용</div></div></div>
+          <div class="tr"><span class="dot"></span><div class="tx"><div class="tt">6월 24일 (D-3) — 푸시로 알려드려요</div></div></div>
+          <div class="tr"><span class="dot w"></span><div class="tx"><div class="tt">6월 27일 14:00 — 매매 제한 시작</div></div></div>
+          <div class="tr"><span class="dot e"></span><div class="tx"><div class="tt">6월 27일 19:00 — 서비스 제한</div></div></div>
+        </div>
+        <div class="banner">홈 상단에서 남은 기한을 계속 볼 수 있어요.</div>
+        <div class="sbtn">캘린더에 추가하기</div>
+      </div>
+    </div>
+    <div class="cap"><b>C-유예</b> · "나중에"의 결과를 날짜·시각 단위 지도로 — 유예를 고른 사용자가 가장 많은 정보를 들고 떠난다.<br><span class="ref">차용: 선례 없음 · 정책=빗썸 공식(60일 팝업→30·3일 알림톡)을 사용자 시점으로 번역</span><br><span class="toff">트레이드오프: 화면이 하나 더 — 빨리 떠나려는 사용자에겐 과잉.</span></div>
+  </div>
+</div>
+
+<!-- ═══════ 화면 3: 이메일 막힘 ═══════ -->
+<h2 class="sec">화면 ③ 이메일 인증 막힘 (R4 — P0 핵심 데모)</h2>
+<p class="sec-sub">진행 표시(2/4 개인정보 입력 · 세부 1/4)는 3안 픽셀 동일. 복구 수단의 배치만 다르다: A=인라인 상주 / B=시트 호출 / C=인라인+기한 맥락.</p>
+<div class="screens">
+
+  <div class="cell">
+    <div class="f">
+      <div class="tb"><span class="bk">‹</span><span class="ti">이메일 인증</span><span class="x">✕</span></div>
+      <div class="prog"><div class="pl"><span><b>2/4 개인정보 입력</b> · 세부 1/4 이메일</span><span>남은 시간 약 2분</span></div><div class="pbar"><i class="on"></i><i class="on"></i><i></i><i></i></div></div>
+      <div class="body">
+        <h3 class="sct" style="font-size:20px">메일이 아직 안 왔나요?</h3>
+        <div class="inp err">인증 코드 6자리</div>
+        <p class="help-err">메일이 도착하지 않았어요. 아래에서 바로 해결할 수 있어요.</p>
+        <div class="sbtn" style="margin-bottom:8px">재발송 (47초 후 가능)</div>
+        <div class="sbtn" style="margin-bottom:8px">메일 앱 열기</div>
+        <p class="help">스팸함에 있을 수 있어요 · <u>다른 이메일로 변경</u></p>
+        <div class="cta" style="opacity:.5">확인하기</div>
+      </div>
+    </div>
+    <div class="cap"><b>A-이메일</b> · 출구 3종(재발송 쿨다운·메일 앱·주소 변경)이 화면에 상주 — 이동 없이 그 자리에서 해결.<br><span class="ref">차용: Klarna(3종)+Substack(메일 앱)+Zora(쿨다운 카운트)</span><br><span class="toff">트레이드오프: 화면이 빽빽 — 정상 케이스 사용자에게도 복구 UI가 보인다.</span></div>
+  </div>
+
+  <div class="cell">
+    <div class="f">
+      <div class="tb"><span class="bk">‹</span><span class="ti">이메일 인증</span><span class="x">✕</span></div>
+      <div class="prog"><div class="pl"><span><b>2/4 개인정보 입력</b> · 세부 1/4 이메일</span><span>남은 시간 약 2분</span></div><div class="pbar"><i class="on"></i><i class="on"></i><i></i><i></i></div></div>
+      <div class="sheetwrap">
+        <div class="body" style="padding-bottom:4px"><div class="inp">인증 코드 6자리</div><p class="help"><u>메일이 안 오나요?</u></p></div>
+        <div class="dim"></div>
+        <div class="sheet">
+          <div class="hdl"></div>
+          <div class="shtt">메일이 안 오나요?</div>
+          <div class="li">다시 보내기 <span class="gr">47초 후 가능</span></div>
+          <div class="li">스팸함 확인하는 방법 <span class="gr">›</span></div>
+          <div class="li">다른 이메일로 변경 <span class="gr">›</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="cap"><b>B-이메일</b> · 본 화면은 현행처럼 깨끗하게, 막혔을 때만 시트 호출 — 정상 흐름에 복구 UI가 안 보인다.<br><span class="ref">차용: 현행 골격+Klarna 출구 3종을 시트로 재배치</span><br><span class="toff">트레이드오프: 시트를 닫으면 안내 소실 + "메일이 안 오나요?" 링크를 못 보면 그대로 막다른 골목.</span></div>
+  </div>
+
+  <div class="cell">
+    <div class="f">
+      <div class="tb"><span class="bk">‹</span><span class="ti">이메일 인증</span><span class="x">✕</span></div>
+      <div class="prog"><div class="pl"><span><b>2/4 개인정보 입력</b> · 세부 1/4 이메일</span><span>남은 시간 약 2분</span></div><div class="pbar"><i class="on"></i><i class="on"></i><i></i><i></i></div></div>
+      <div class="body">
+        <div class="banner">지금 막혀도 괜찮아요 — 기한까지 14일 남았어요.</div>
+        <div class="inp err">인증 코드 6자리</div>
+        <p class="help-err">메일이 도착하지 않았어요. 아래에서 바로 해결할 수 있어요.</p>
+        <div class="sbtn" style="margin-bottom:8px">재발송 (47초 후 가능)</div>
+        <div class="sbtn" style="margin-bottom:8px">메일 앱 열기</div>
+        <p class="help">스팸함에 있을 수 있어요 · <u>다른 이메일로 변경</u></p>
+        <div class="cta" style="opacity:.5">확인하기</div>
+      </div>
+    </div>
+    <div class="cap"><b>C-이메일</b> · A와 같은 인라인 복구에 "기한 여유" 맥락 한 줄 — 막힘 순간의 불안(자산 잠김 공포)을 기한 정보로 진정.<br><span class="ref">차용: A 구성+타임라인 가설의 연장</span><br><span class="toff">트레이드오프: 배너가 한 줄 추가 — D-1처럼 여유가 없을 땐 이 카피가 오히려 압박으로 뒤집힘(상태별 카피 필요).</span></div>
+  </div>
+</div>
+
+<!-- ═══════ 화면 4: 신분증 실패 ═══════ -->
+<h2 class="sec">화면 ④ 신분증 촬영 실패 (R5)</h2>
+<p class="sec-sub">원인 분류(공식 5종)와 잔여 횟수는 3안 공통 데이터 — 보여주는 방식이 다르다: A=원인 1개 집중 / B=분류 전체 시트 / C=소진 이후까지 예고.</p>
+<div class="screens">
+
+  <div class="cell">
+    <div class="f">
+      <div class="tb"><span class="bk">‹</span><span class="ti">신분증 인증</span><span class="x">✕</span></div>
+      <div class="prog"><div class="pl"><span><b>3/4 신분증</b></span><span>남은 시간 약 1분</span></div><div class="pbar"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div></div>
+      <div class="body">
+        <div class="cam"><div style="font-size:14px;font-weight:600">빛이 반사돼 글자가 안 보여요</div><div class="camfrm">방금 찍은 신분증 미리보기</div><div style="font-size:13px;color:#a1a1aa">조명을 끄거나 각도를 낮춰 다시 찍어 주세요.</div></div>
+        <div class="chips"><span class="chip warn">남은 시도 4회</span></div>
+        <div class="cta">다시 촬영하기</div>
+        <div class="gbtn">인식된 정보 직접 수정하기</div>
+      </div>
+    </div>
+    <div class="cap"><b>A-신분증</b> · 실패 원인 1개를 진단해 교정 한 문장과 짝으로 — "원인+다음 행동" Voice 그대로.<br><span class="ref">차용: DoorDash(원인+교정 인라인)+Coinbase(미리보기)+빗썸 1/10 카운터</span><br><span class="toff">트레이드오프: 원인 자동 진단이 틀리면 안내도 틀린다.</span></div>
+  </div>
+
+  <div class="cell">
+    <div class="f">
+      <div class="tb"><span class="bk">‹</span><span class="ti">신분증 인증</span><span class="x">✕</span></div>
+      <div class="prog"><div class="pl"><span><b>3/4 신분증</b></span><span>남은 시간 약 1분</span></div><div class="pbar"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div></div>
+      <div class="sheetwrap">
+        <div class="body" style="padding-bottom:4px"><div class="cam" style="margin-bottom:4px"><div class="camfrm" style="margin:4px 0">카메라 화면</div></div></div>
+        <div class="dim"></div>
+        <div class="sheet">
+          <div class="hdl"></div>
+          <div class="shtt">인식이 안 됐어요 <span class="chip warn" style="margin-left:6px">남은 시도 4회</span></div>
+          <div class="li" style="color:#dc2626;font-weight:600">빛 반사 — 조명 끄고 다시 ✓</div>
+          <div class="li" style="color:#a1a1aa">사본·화면 촬영은 인식 불가</div>
+          <div class="li" style="color:#a1a1aa">세로 방향은 가로로 돌려서</div>
+          <div class="li" style="color:#a1a1aa">훼손·만료 신분증은 교체 후</div>
+        </div>
+      </div>
+    </div>
+    <div class="cap"><b>B-신분증</b> · 공식 원인 분류 전체를 시트로 펼치고 해당 항목만 하이라이트 — 본 촬영 화면은 보존.<br><span class="ref">차용: 공식 실패 분류 5종+Lime(팁 분리 배치)</span><br><span class="toff">트레이드오프: 리스트가 길어 "내 원인"을 한 번 더 찾아야 한다.</span></div>
+  </div>
+
+  <div class="cell">
+    <div class="f">
+      <div class="tb"><span class="bk">‹</span><span class="ti">신분증 인증</span><span class="x">✕</span></div>
+      <div class="prog"><div class="pl"><span><b>3/4 신분증</b></span><span>남은 시간 약 1분</span></div><div class="pbar"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div></div>
+      <div class="body">
+        <div class="cam"><div style="font-size:14px;font-weight:600">빛이 반사돼 글자가 안 보여요</div><div class="camfrm">방금 찍은 신분증 미리보기</div><div style="font-size:13px;color:#a1a1aa">조명을 끄거나 각도를 낮춰 다시 찍어 주세요.</div></div>
+        <div class="chips"><span class="chip warn">남은 시도 4회</span></div>
+        <p class="help">4회를 모두 사용해도 계정이 잠기지 않아요 — 내일 0시에 다시 시도하거나, 모바일 신분증으로 바로 인증할 수 있어요.</p>
+        <div class="cta">다시 촬영하기</div>
+        <div class="gbtn">모바일 신분증으로 인증하기</div>
+      </div>
+    </div>
+    <div class="cap"><b>C-신분증</b> · 잔여 횟수에 "소진하면 어떻게 되는지"와 대체 경로까지 예고 — 카운터를 불안 요소에서 예보로 바꾼다.<br><span class="ref">차용: A 구성+코인원 5회 잠김 실사례(반면교사)+코인원 공식 익일 리셋 정책</span><br><span class="toff">트레이드오프: 안내 텍스트가 가장 길다.</span></div>
+  </div>
+</div>
+
+<!-- ═══════ 화면 5: 제출 전 검토 ═══════ -->
+<h2 class="sec">화면 ⑤ 제출 전 검토 (R13)</h2>
+<p class="sec-sub">검수 반려→전체 재이행 루프의 마지막 차단막. A·C=행 단위 / B=단계 단위 — 정보 구조 자체가 다르다.</p>
+<div class="screens">
+
+  <div class="cell">
+    <div class="f">
+      <div class="tb"><span class="bk">‹</span><span class="ti">제출 전 확인</span><span class="x">✕</span></div>
+      <div class="prog"><div class="pl"><span><b>4/4 완료</b> · 제출 전 확인</span><span></span></div><div class="pbar"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div></div>
+      <div class="body">
+        <p class="lead">제출하면 수정할 수 없어요. 아래 항목을 확인해 주세요.</p>
+        <div class="card" style="padding:4px 16px">
+          <div class="li">영문 이름 <span class="chip warn" style="margin-left:6px">반려 잦은 항목</span><span class="gr">HONG GILDONG ✎</span></div>
+          <div class="li">거주지 주소 <span class="chip warn" style="margin-left:6px">반려 잦은 항목</span><span class="gr">서울 ··· ✎</span></div>
+          <div class="li">직장명 <span class="chip warn" style="margin-left:6px">반려 잦은 항목</span><span class="gr">(주)가나다 ✎</span></div>
+          <div class="li">직업 <span class="gr">회사원 ✎</span></div>
+          <div class="li">거래 목적 <span class="gr">투자 ✎</span></div>
+        </div>
+        <div class="cta">이대로 제출하기</div>
+      </div>
+    </div>
+    <div class="cap"><b>A-검토</b> · 행 단위 직진입 수정 + 반려 빈발 3항목에 경고 칩 — 오타 하나로 전체 재이행하는 루프를 행 단위에서 차단.<br><span class="ref">차용: Capital One(행 편집)+빗썸 영문명 경고+Baymard(68% 역행 문제)</span><br><span class="toff">트레이드오프: 화면이 길다 — 항목 많아지면 스크롤 검토.</span></div>
+  </div>
+
+  <div class="cell">
+    <div class="f">
+      <div class="tb"><span class="bk">‹</span><span class="ti">제출 전 확인</span><span class="x">✕</span></div>
+      <div class="prog"><div class="pl"><span><b>4/4 완료</b> · 제출 전 확인</span><span></span></div><div class="pbar"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div></div>
+      <div class="body">
+        <p class="lead">단계별로 입력 내용을 확인해 주세요.</p>
+        <div class="card" style="padding:4px 16px">
+          <div class="li">1. 본인인증 <span class="chip ok" style="margin-left:auto">완료</span></div>
+          <div class="li" style="border-bottom:0">2. 개인정보 입력 <span class="gr">펼침 ▾</span></div>
+          <div style="background:#fafafa;border-radius:12px;padding:4px 12px;margin:0 0 8px">
+            <div class="li" style="min-height:40px;font-size:14px">영문 이름 <span class="gr">HONG GILDONG</span></div>
+            <div class="li" style="min-height:40px;font-size:14px;border-bottom:0">주소 <span class="gr">서울 ···</span></div>
+            <div class="sbtn" style="height:36px;font-size:13px;margin:4px 0 8px">이 단계 수정하기</div>
+          </div>
+          <div class="li">3. 신분증 <span class="chip ok" style="margin-left:auto">완료</span></div>
+          <div class="li">4. 계좌 <span class="chip ok" style="margin-left:auto">완료</span></div>
+        </div>
+        <div class="cta">이대로 제출하기</div>
+      </div>
+    </div>
+    <div class="cap"><b>B-검토</b> · 진행해 온 4단계 골격 그대로 아코디언 — 멘탈모델 일치, 수정은 섹션 단위 재진입.<br><span class="ref">차용: 현행 단계 구조+Robinhood(그룹 검토)</span><br><span class="toff">트레이드오프: 접힌 섹션의 오류는 펼치기 전엔 안 보인다.</span></div>
+  </div>
+
+  <div class="cell">
+    <div class="f">
+      <div class="tb"><span class="bk">‹</span><span class="ti">제출 전 확인</span><span class="x">✕</span></div>
+      <div class="prog"><div class="pl"><span><b>4/4 완료</b> · 제출 전 확인</span><span></span></div><div class="pbar"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div></div>
+      <div class="body">
+        <div class="banner">오늘 제출하면 기한(6월 27일)보다 14일 빨라요. 검수가 길어져도 여유 있어요.</div>
+        <div class="card" style="padding:4px 16px">
+          <div class="li">영문 이름 <span class="chip warn" style="margin-left:6px">반려 잦은 항목</span><span class="gr">HONG GILDONG ✎</span></div>
+          <div class="li">거주지 주소 <span class="gr">서울 ··· ✎</span></div>
+          <div class="li">직장명 <span class="chip warn" style="margin-left:6px">반려 잦은 항목</span><span class="gr">(주)가나다 ✎</span></div>
+          <div class="li">거래 목적 <span class="gr">투자 ✎</span></div>
+        </div>
+        <p class="help">반려되면 다시 제출해야 해요 — 위 항목이 신분증·서류와 같은지 확인해 주세요.</p>
+        <div class="cta">이대로 제출하기</div>
+      </div>
+    </div>
+    <div class="cap"><b>C-검토</b> · A의 행 편집에 "기한 대비 여유" 안심 카피 — 제출이라는 마지막 행동을 기한 스토리로 마무리.<br><span class="ref">차용: A 구성+타임라인 가설의 종결부</span><br><span class="toff">트레이드오프: 기한 임박 상태에선 이 배너가 압박 카피로 변함(상태별 카피 분기 필요).</span></div>
+  </div>
+</div>
+
+<!-- ═══════ 푸터 ═══════ -->
+<footer class="note">
+  <h3>분기하지 않은 것 (전 시안 공통)과 이유</h3>
+  <ul>
+    <li><b>진행 표시</b> — R3 A안(4분모+단계명+세부 병행+잔여 시간)으로 확정됨 · 화면 ③④⑤ 상단에 픽셀 동일 적용</li>
+    <li><b>완료 화면</b> — 레퍼런스 보드에서 "분기 없이 공통 적용 권장"(Coinbase식 알림 약속 + 동기 구간 시간 상한 + CARF 예고)</li>
+    <li><b>Voice</b> — 디자인시스템 §7 확정(해요체·원인+다음 행동·공포 소구 금지) — 단 시안별 "중심 톤"(채비/길잡이/예보)은 가설의 일부</li>
+    <li><b>외부 핸드오프(R6)</b> — 핸드오프 문서상 인터스티셜형 우세가 명확해(외부 의존 무게 대비 인라인은 빈약) 이번 보드에선 미분기 — 프로토타입에서 인터스티셜로 진행 권장</li>
+  </ul>
+  <h3 style="margin-top:16px">다음 단계</h3>
+  <ul>
+    <li>시안 선택 또는 화면 단위 교배 → <b>working-prototype</b>(상태 4종 토글 포함 단일 HTML)으로 핸드오프</li>
+    <li>교배 예시: <b>C의 진입·유예(①②) + A의 막힘 복구(③④) + A의 검토(⑤)</b> — "예보로 데려와서, 인라인으로 풀어주는" 조합</li>
+  </ul>
+  <p style="margin-top:14px;color:#71717a">제약: 모든 카피는 후보 카피(가설 표현용)이며 실서비스 카피 아님 · 자사 표기 '거래소 A' · 정책 수치(5h/1h, 시도 횟수, 익일 리셋)는 공식 문서 기반 — 구현 전 재확인 필요 · 의존성 0 단일 HTML</p>
+</footer>
+
+</div>
+</body>
+</html>

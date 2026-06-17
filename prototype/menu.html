@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex" />
+  <title>거래소 A · KYC(고객확인) 재이행 — 프로토타입</title>
+  <style>
+    :root{
+      --bg:#ffffff; --surface:#fafafa; --fg:#09090b; --muted:#71717a;
+      --border:#e4e4e7; --primary:#4338ca; --primary-fg:#eef2ff; --card:#ffffff;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{
+      font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo",
+        "Segoe UI",Roboto,sans-serif;
+      background:var(--bg);color:var(--fg);line-height:1.5;
+      -webkit-font-smoothing:antialiased;
+    }
+    .wrap{max-width:880px;margin:0 auto;padding:64px 24px 96px}
+    .eyebrow{
+      display:inline-block;font-size:12px;font-weight:600;letter-spacing:.04em;
+      color:var(--primary);background:#eef2ff;padding:5px 10px;border-radius:999px;
+    }
+    h1{font-size:30px;font-weight:700;letter-spacing:-.02em;margin:18px 0 10px}
+    .lead{font-size:16px;color:var(--muted);max-width:620px}
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:40px}
+    @media(max-width:640px){.grid{grid-template-columns:1fr}.wrap{padding:40px 18px 64px}}
+    a.card{
+      display:block;text-decoration:none;color:inherit;background:var(--card);
+      border:1px solid var(--border);border-radius:14px;padding:20px 22px;
+      transition:border-color .15s ease, transform .15s ease, box-shadow .15s ease;
+    }
+    a.card:hover{border-color:var(--primary);transform:translateY(-2px);
+      box-shadow:0 8px 24px rgba(67,56,202,.08)}
+    a.card.feature{grid-column:1 / -1;background:linear-gradient(180deg,#fafaff,#fff)}
+    .tag{font-size:11px;font-weight:600;color:var(--primary);text-transform:uppercase;letter-spacing:.05em}
+    .card h2{font-size:17px;font-weight:650;margin:8px 0 6px}
+    .card.feature h2{font-size:22px}
+    .card p{font-size:13.5px;color:var(--muted)}
+    .arrow{margin-top:14px;font-size:13px;font-weight:600;color:var(--primary)}
+    footer{margin-top:56px;padding-top:24px;border-top:1px solid var(--border);
+      font-size:12.5px;color:var(--muted)}
+    footer code{background:var(--surface);padding:2px 6px;border-radius:6px;font-size:12px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <span class="eyebrow">거래소 A · UX</span>
+    <h1>KYC(고객확인) 재이행 플로우 개선</h1>
+    <p class="lead">
+      스토어 리뷰에서 발굴한 문제 → 가설 → 시안 → 최종 프로토타입까지의 산출물 모음입니다.
+      각 카드를 눌러 클릭되는 화면을 확인하세요.
+    </p>
+
+    <div class="grid">
+      <a class="card feature" href="prototypes/kyc-reverification-final.html">
+        <span class="tag">최종 프로토타입</span>
+        <h2>고객확인 재이행 — 최종안 ⭐</h2>
+        <p>핵심 플로우가 실제로 클릭·반응하는 단일 HTML 인터랙티브 목업.</p>
+        <div class="arrow">열기 →</div>
+      </a>
+
+      <a class="card" href="prototypes/kyc-reverification-variants.html">
+        <span class="tag">시안 비교</span>
+        <h2>UX 가설별 시안</h2>
+        <p>서로 다른 UX 가설로 가른 시안들을 한 화면에서 비교.</p>
+        <div class="arrow">열기 →</div>
+      </a>
+
+      <a class="card" href="prototypes/kyc-reverification-wireframes-3.html">
+        <span class="tag">와이어프레임</span>
+        <h2>와이어프레임 3종</h2>
+        <p>가설별 초기 와이어프레임 시안 3종.</p>
+        <div class="arrow">열기 →</div>
+      </a>
+
+      <a class="card" href="prototypes/progress-indicator-compare.html">
+        <span class="tag">컴포넌트</span>
+        <h2>진행 표시(스텝퍼) 비교</h2>
+        <p>진행 인디케이터 패턴 비교 보드.</p>
+        <div class="arrow">열기 →</div>
+      </a>
+
+      <a class="card" href="prototypes/exchange-a-auth-brief-deck.html">
+        <span class="tag">브리프</span>
+        <h2>문제 브리프 덱</h2>
+        <p>리뷰 1년치 분석 → 가장 아픈 문제 정의 발표 덱.</p>
+        <div class="arrow">열기 →</div>
+      </a>
+    </div>
+
+    <footer>
+      Private 산출물 · 외부 공개 시 거래소명은 <code>거래소 A</code>로 익명화됨 ·
+      기획문서·스킬·원자료는 비공개 저장소에만 보관(이 배포에는 미포함).
+    </footer>
+  </div>
+</body>
+</html>
