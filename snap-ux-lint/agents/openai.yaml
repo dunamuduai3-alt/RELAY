@@ -1,4 +1,0 @@
-interface:
-  display_name: "스냅 & UX Lint"
-  short_description: "사용자 목적과 추가 자료를 먼저 확인한 뒤 화면 캡처를 UX 기준으로 점검한다."
-  default_prompt: "먼저 이 플로우의 사용자 목적과 PRD/정책/제품 UX guide 같은 추가 자료가 있는지 물어본 뒤, 그 답변을 기준으로 UX Lint를 해줘. Snapshot, UX Lint Report, fix list를 웹 리포트 형태로 정리하고, 마지막에 문제 위치를 콕 집은 Annotated UX Snapshot도 추가해줘."
